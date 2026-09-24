@@ -23,8 +23,9 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
 
-    <!-- html2canvas for High Resolution Card Image Download -->
+    <!-- html2canvas and html2pdf for High Resolution Downloads and PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <!-- MediaPipe Face Detection for Auto Face Cropping -->
     <script
@@ -73,7 +74,9 @@
           visibility: hidden;
         }
         #print-area,
-        #print-area * {
+        #print-area *,
+        #manual-printable-content,
+        #manual-printable-content * {
           visibility: visible;
         }
         #print-area {
@@ -81,6 +84,14 @@
           left: 0;
           top: 0;
           width: 100%;
+        }
+        #manual-printable-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          background: white;
+          padding: 10px;
         }
         .no-print {
           display: none !important;
@@ -192,6 +203,12 @@
             >
               <i class="fa-solid fa-magnifying-glass mr-1"></i> ตรวจสอบสถานะ
             </button>
+            <button
+              onclick="app.navigate('manual')"
+              class="nav-btn nav-manual px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition font-medium"
+            >
+              <i class="fa-solid fa-book-open mr-1 text-emerald-600"></i> คู่มือการใช้งาน
+            </button>
 
             <!-- Admin Only Buttons (Visible only when logged in as admin) -->
             <button
@@ -294,6 +311,15 @@
         >
           ตรวจสอบสถานะ
         </button>
+        <button
+          onclick="
+            app.navigate('manual');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50 font-medium text-emerald-700"
+        >
+          <i class="fa-solid fa-book-open mr-2 text-emerald-600"></i> คู่มือการใช้งาน (PDF)
+        </button>
 
         <!-- Mobile Admin Only -->
         <button
@@ -342,10 +368,20 @@
             class="relative px-6 py-12 sm:px-12 lg:px-16 text-center lg:text-left flex flex-col lg:flex-row items-center"
           >
             <div class="lg:w-2/3 lg:pr-8 xl:pr-12">
-              <span
-                class="inline-block py-1 px-3 rounded-full bg-bonsai-100 text-bonsai-800 text-sm font-semibold mb-4 border border-bonsai-200"
-                >ระบบลงทะเบียนสมาชิกออนไลน์</span
-              >
+              <div class="flex flex-wrap items-center justify-center lg:justify-start gap-2.5 mb-4">
+                <span
+                  class="inline-block py-1 px-3.5 rounded-full bg-bonsai-100 text-bonsai-800 text-sm font-semibold border border-bonsai-200"
+                  >ระบบลงทะเบียนสมาชิกออนไลน์</span
+                >
+                <button
+                  type="button"
+                  onclick="app.navigate('manual')"
+                  class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 shadow-xs transition hover:scale-105 cursor-pointer"
+                  title="คลิกเพื่อเปิดคู่มือการใช้งานระบบ"
+                >
+                  <i class="fa-solid fa-book-open text-emerald-600"></i> คู่มือการใช้งาน (PDF)
+                </button>
+              </div>
               <h2 class="flex flex-col gap-2.5 sm:gap-3 text-gray-900 mb-8">
                 <span class="text-3xl md:text-5xl font-bold leading-tight">
                   ยินดีต้อนรับสู่ระบบสมาชิก
@@ -1388,6 +1424,359 @@
             </button>
           </div>
           <div id="status-result" class="mt-6"></div>
+        </div>
+      </div>
+
+      <!-- View: User Manual (คู่มือการใช้งาน พร้อมภาพจริง และดาวน์โหลด PDF) -->
+      <div id="view-manual" class="view-section hide">
+        <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8 md:p-10 mb-8 border border-gray-100">
+          <!-- Top Action Bar (No-Print) -->
+          <div class="no-print flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 mb-8 border-b border-gray-200">
+            <div>
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-2">
+                <i class="fa-solid fa-book-open"></i> เอกสารคู่มือระบบสมาชิกทางการ
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                คู่มือการใช้งานระบบทะเบียนสมาชิก
+              </h1>
+              <p class="text-sm text-gray-500 mt-1">
+                สมาคมบอนไซไทย (Thai Bonsai Association) - Member Portal User Manual
+              </p>
+            </div>
+
+            <!-- Download and Print Action Buttons -->
+            <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+              <button
+                id="btn-download-manual-pdf"
+                type="button"
+                onclick="app.downloadManualPDF()"
+                class="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:shadow-lg transition-all cursor-pointer"
+                title="คลิกเพื่อดาวน์โหลดคู่มือฉบับสมบูรณ์เป็นไฟล์ PDF"
+              >
+                <i class="fa-solid fa-file-pdf text-base"></i> ดาวน์โหลดเป็นไฟล์ PDF
+              </button>
+              <button
+                type="button"
+                onclick="window.print()"
+                class="inline-flex items-center justify-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-semibold text-sm border border-gray-300 transition cursor-pointer"
+                title="พิมพ์เอกสารออกเครื่องพิมพ์"
+              >
+                <i class="fa-solid fa-print"></i> พิมพ์
+              </button>
+              <button
+                type="button"
+                onclick="app.navigate('home')"
+                class="inline-flex items-center justify-center gap-1.5 bg-bonsai-600 hover:bg-bonsai-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-xs transition cursor-pointer"
+              >
+                <i class="fa-solid fa-arrow-left"></i> หน้าหลัก
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Navigation Chips (No-Print) -->
+          <div class="no-print bg-slate-50 p-4 rounded-xl border border-slate-200 mb-8">
+            <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-list-ul text-emerald-600"></i> สารบัญหัวข้อด่วน (คลิกเพื่อข้ามไปยังหัวข้อ):
+            </div>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <a href="#manual-sec-1" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">1. หน้าหลัก</a>
+              <a href="#manual-sec-2" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">2. สมัครสมาชิก & AI Crop</a>
+              <a href="#manual-sec-3" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">3. แจ้งชำระเงิน</a>
+              <a href="#manual-sec-4" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">4. ตรวจสอบสถานะ</a>
+              <a href="#manual-sec-5" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">5. คลังบัตรดิจิทัลทั้งหมด</a>
+              <a href="#manual-sec-6" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">6. บัตรดิจิทัล & ดาวน์โหลด</a>
+              <a href="#manual-sec-7" class="px-3 py-1.5 bg-white hover:bg-emerald-50 text-gray-700 hover:text-emerald-700 rounded-lg border border-gray-200 font-medium transition shadow-2xs">7. ฐานข้อมูล & เจ้าหน้าที่</a>
+            </div>
+          </div>
+
+          <!-- Printable & Exportable Manual Content Container -->
+          <div id="manual-printable-content" class="space-y-12 text-gray-800 leading-relaxed font-sans max-w-4xl mx-auto">
+            
+            <!-- Cover Header for PDF / Print -->
+            <div class="text-center pb-8 border-b-2 border-emerald-600">
+              <div class="w-24 h-24 mx-auto mb-3 bg-white rounded-full p-2 border-2 border-emerald-600 shadow-sm flex items-center justify-center">
+                <img src="logo.png" alt="สมาคมบอนไซไทย" class="w-full h-full object-contain" />
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-black text-gray-900">
+                คู่มือการใช้งานระบบสมาชิกสมาคมบอนไซไทย
+              </h2>
+              <p class="text-base text-bonsai-600 font-semibold mt-1">
+                Thai Bonsai Association - Digital Membership System
+              </p>
+              <div class="flex items-center justify-center gap-3 text-xs text-gray-500 mt-2">
+                <span>เวอร์ชัน: 2026.1 Official Release</span>
+                <span>•</span>
+                <span>รองรับ: มือถือ / แท็บเล็ต / คอมพิวเตอร์</span>
+              </div>
+            </div>
+
+            <!-- หมวดที่ 1: หน้าหลัก (Home Page) -->
+            <section id="manual-sec-1" class="pt-4 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">1</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">หน้าหลัก (Home Page)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                หน้าแรกของระบบได้รับการออกแบบให้มีสัดส่วน 2:1 ที่สมดุล โดยแบ่งหน้าจอเป็น 3 ส่วนหลัก (ฝั่งซ้ายใช้ 2 ส่วน และฝั่งขวาใช้ 1 ส่วน):
+              </p>
+              <ul class="list-disc list-inside space-y-2 text-sm text-gray-700 mb-4 pl-2">
+                <li><strong>ฝั่งซ้าย (2 ใน 3 ส่วน):</strong> ประกอบด้วยข้อความต้อนรับทางการ และ <strong>ปุ่มเมนูด่วน 5 รายการ จัดเป็น 2 แถว</strong> ใช้โทนสีสดใสไม่ซ้ำกัน พร้อมลายเส้นไม้ธรรมชาติของการ์ดสมาชิก</li>
+                <li><strong>ฝั่งขวา (1 ใน 3 ส่วน):</strong> ตราสัญลักษณ์โลโก้สมาคมทรงกลม <strong>ขอบ 3 มิติ (3D Beveled Medallion)</strong> สีเขียวมรกตเปล่งประกาย พร้อมภาพบุคคลและต้นบอนไซที่วางชิดขอบล่างสุดอย่างสง่างาม</li>
+              </ul>
+
+              <!-- ภาพประกอบหน้า 1 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/01_home.png" alt="หน้าหลัก ระบบสมาชิกสมาคมบอนไซไทย" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 1: หน้าหลักของระบบแสดงปุ่มเมนู 2 แถว 5 สี และตราสัญลักษณ์ 3 มิติ
+                </div>
+              </div>
+
+              <!-- รายละเอียดปุ่ม 5 สี -->
+              <div class="overflow-x-auto my-4">
+                <table class="min-w-full text-xs sm:text-sm text-left border border-gray-200 rounded-xl overflow-hidden">
+                  <thead class="bg-gray-100 font-bold text-gray-700">
+                    <tr>
+                      <th class="py-2.5 px-3">แถว</th>
+                      <th class="py-2.5 px-3">รายการปุ่ม</th>
+                      <th class="py-2.5 px-3">โทนสี</th>
+                      <th class="py-2.5 px-3">ฟังก์ชันการทำงาน</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-2 px-3 font-semibold text-gray-500">แถว 1</td>
+                      <td class="py-2 px-3 font-bold text-emerald-800">1. สมัครสมาชิกใหม่</td>
+                      <td class="py-2 px-3 text-emerald-600 font-medium">เขียวมรกตสดใส</td>
+                      <td class="py-2 px-3">เปิดฟอร์มลงทะเบียนสมาชิกใหม่ พร้อมตรวจจับใบหน้า AI</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-2 px-3 font-semibold text-gray-500">แถว 1</td>
+                      <td class="py-2 px-3 font-bold text-amber-800">2. แจ้งชำระเงิน</td>
+                      <td class="py-2 px-3 text-amber-600 font-medium">ทองอำพันสว่าง</td>
+                      <td class="py-2 px-3">แนบหลักฐานสลิปโอนเงินค่าบำรุงสมาชิก</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-2 px-3 font-semibold text-gray-500">แถว 1</td>
+                      <td class="py-2 px-3 font-bold text-blue-800">3. ตรวจสอบสถานะ</td>
+                      <td class="py-2 px-3 text-blue-600 font-medium">ฟ้าครามสดใส</td>
+                      <td class="py-2 px-3">ตรวจสอบสถานะการอนุมัติและวันหมดอายุบัตร</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-2 px-3 font-semibold text-gray-500">แถว 2</td>
+                      <td class="py-2 px-3 font-bold text-purple-800">4. บัตรสมาชิก</td>
+                      <td class="py-2 px-3 text-purple-600 font-medium">ม่วงไวโอเล็ต</td>
+                      <td class="py-2 px-3">เปิดดูแกลเลอรีบัตรประจำตัวดิจิทัลของทุกคนในระบบ</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                      <td class="py-2 px-3 font-semibold text-gray-500">แถว 2</td>
+                      <td class="py-2 px-3 font-bold text-rose-800">5. สมาชิกทั้งหมด</td>
+                      <td class="py-2 px-3 text-rose-600 font-medium">แดงทับทิมสดใส</td>
+                      <td class="py-2 px-3">แสดงยอดรวมสมาชิกแบบเรียลไทม์ และคลิกเปิดดูรายชื่อ</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- หมวดที่ 2: ระบบสมัครสมาชิกใหม่ (Registration) -->
+            <section id="manual-sec-2" class="pt-6 border-t border-gray-100 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">2</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">ระบบสมัครสมาชิกใหม่ (Member Registration & AI Crop)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                แบบฟอร์มลงทะเบียนออนไลน์สำหรับสมาชิกใหม่ ออกแบบให้กรอกง่ายและมีความปลอดภัยตามมาตรฐานสากล:
+              </p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+                <div class="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                  <h4 class="font-bold text-emerald-900 mb-1 flex items-center gap-1.5 text-sm">
+                    <i class="fa-solid fa-wand-magic-sparkles text-emerald-600"></i> ระบบตรวจจับใบหน้า AI MediaPipe
+                  </h4>
+                  <p class="text-xs text-emerald-800">
+                    เมื่ออัปโหลดรูปหน้าตรง AI จะคำนวณและครอบรูปในอัตราส่วน 3:4 ให้โดยอัตโนมัติ โดยปรับมุมมองให้กว้างขึ้น 3 เท่าของใบหน้า จัดให้ใบหน้าอยู่ตรงกลาง มีพื้นที่ว่างรอบข้างและเหนือศีรษะอย่างเป็นธรรมชาติ
+                  </p>
+                </div>
+                <div class="p-4 bg-blue-50/70 border border-blue-200 rounded-xl">
+                  <h4 class="font-bold text-blue-900 mb-1 flex items-center gap-1.5 text-sm">
+                    <i class="fa-solid fa-shield-check text-blue-600"></i> ข้อกำหนดความยินยอม PDPA
+                  </h4>
+                  <p class="text-xs text-blue-800">
+                    มีช่องติ๊กยินยอมให้เก็บรวบรวมและเปิดเผยข้อมูลตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พร้อมบันทึกวันและเวลาที่กดยินยอมลงฐานข้อมูล Google Sheets อัตโนมัติ
+                  </p>
+                </div>
+              </div>
+
+              <!-- ภาพประกอบหน้า 2 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/02_register.png" alt="หน้าสมัครสมาชิกใหม่ สมาคมบอนไซไทย" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 2: หน้าแบบฟอร์มลงทะเบียนพร้อมระบบครอบใบหน้า AI และกล่องยินยอม PDPA
+                </div>
+              </div>
+
+              <div class="space-y-2 text-sm text-gray-700">
+                <p><strong>ขั้นตอนการลงทะเบียน:</strong></p>
+                <ol class="list-decimal list-inside space-y-1.5 pl-2">
+                  <li>กรอกคำนำหน้า, ชื่อ, นามสกุล, เบอร์โทรศัพท์ และเลือกจังหวัด</li>
+                  <li>อัปโหลดรูปถ่ายหน้าตรง ระบบ AI จะแสดงตัวอย่างที่ครอบเสร็จแล้วทันที</li>
+                  <li>กำหนดวันออกบัตร และวันหมดอายุ (ระบบตั้งค่าเริ่มต้นให้อัตโนมัติ 1 ปี)</li>
+                  <li>ติ๊กเครื่องหมายถูกเพื่อยินยอมตามข้อกำหนด PDPA</li>
+                  <li>กดปุ่ม <strong>"ลงทะเบียนสมาชิก"</strong> เพื่อบันทึกข้อมูล</li>
+                </ol>
+              </div>
+            </section>
+
+            <!-- หมวดที่ 3: ระบบแจ้งชำระเงิน (Payment) -->
+            <section id="manual-sec-3" class="pt-6 border-t border-gray-100 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">3</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">ระบบแจ้งชำระเงิน (Payment Submission)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                ช่องทางสำหรับสมาชิกในการแนบสลิปหลักฐานการโอนเงินค่าบำรุงสมาชิกเข้าสู่ระบบ:
+              </p>
+
+              <!-- ภาพประกอบหน้า 3 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/03_payment.png" alt="หน้าแจ้งชำระเงิน สมาคมบอนไซไทย" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 3: หน้าค้นหาข้อมูลสมาชิกและแนบภาพถ่ายสลิปโอนเงิน
+                </div>
+              </div>
+
+              <div class="space-y-1.5 text-sm text-gray-700">
+                <p><strong>ขั้นตอนการใช้งาน:</strong></p>
+                <ul class="list-disc list-inside space-y-1 pl-2">
+                  <li>กรอกรหัสสมาชิก (เช่น TBA-0001) หรือเบอร์โทรศัพท์ที่ลงทะเบียนไว้ แล้วกด <strong>"ตรวจสอบข้อมูล"</strong></li>
+                  <li>ระบบจะดึงชื่อ-นามสกุลและสถานะปัจจุบันมาแสดง พร้อมเลขที่บัญชีธนาคารของสมาคมบอนไซไทย</li>
+                  <li>อัปโหลดไฟล์ภาพสลิปโอนเงิน (รองรับไฟล์รูปภาพทุกรูปแบบ)</li>
+                  <li>กดปุ่ม <strong>"ยืนยันการแจ้งชำระเงิน"</strong> ข้อมูลจะถูกส่งถึงเจ้าหน้าที่ทันที</li>
+                </ul>
+              </div>
+            </section>
+
+            <!-- หมวดที่ 4: ระบบตรวจสอบสถานะสมาชิก (Status Tracking) -->
+            <section id="manual-sec-4" class="pt-6 border-t border-gray-100 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">4</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">ระบบตรวจสอบสถานะสมาชิก (Status Tracking)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                ช่วยให้สมาชิกสามารถติดตามสถานะการสมัคร การอนุมัติ และวันหมดอายุของบัตรได้ด้วยตนเองตลอด 24 ชั่วโมง
+              </p>
+
+              <!-- ภาพประกอบหน้า 4 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/04_status.png" alt="หน้าตรวจสอบสถานะสมาชิก" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 4: หน้าตรวจสอบสถานะสมาชิกผ่านเบอร์โทรศัพท์หรือรหัสสมาชิก
+                </div>
+              </div>
+
+              <div class="space-y-1.5 text-sm text-gray-700">
+                <p><strong>ผลลัพธ์การตรวจสอบ:</strong></p>
+                <ul class="list-disc list-inside space-y-1 pl-2">
+                  <li><span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span><strong>สถานะอนุมัติแล้ว:</strong> สมาชิกสามารถคลิกเพื่อเปิดดูบัตรประจำตัวดิจิทัลได้ทันที</li>
+                  <li><span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span><strong>สถานะรอตรวจสอบชำระเงิน:</strong> มีปุ่มคลิกข้ามไปหน้าแจ้งชำระเงินได้สะดวกรวดเร็ว</li>
+                </ul>
+              </div>
+            </section>
+
+            <!-- หมวดที่ 5: คลังบัตรสมาชิกดิจิทัลทั้งหมด (All Member Cards Gallery) -->
+            <section id="manual-sec-5" class="pt-6 border-t border-gray-100 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">5</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">คลังบัตรสมาชิกดิจิทัลทั้งหมด (All Cards Gallery)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                หน้ารวมบัตรสมาชิกของทุกคนในระบบสมาคมบอนไซไทย แสดงผลในรูปแบบ Card Gallery เสมือนจริง พร้อมหัวการ์ดลายเส้นไม้และลายน้ำต้นบอนไซ:
+              </p>
+
+              <!-- ภาพประกอบหน้า 5 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/05_all_cards.png" alt="คลังบัตรสมาชิกดิจิทัลทั้งหมด" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 5: แกลเลอรีบัตรสมาชิกประจำตัวดิจิทัลพร้อมช่องค้นหาอัจฉริยะ
+                </div>
+              </div>
+
+              <div class="space-y-1.5 text-sm text-gray-700">
+                <p><strong>คุณสมบัติเด่นของหน้านี้:</strong></p>
+                <ul class="list-disc list-inside space-y-1 pl-2">
+                  <li><strong>ช่องค้นหาเรียลไทม์:</strong> สามารถพิมพ์ค้นหาด้วย ชื่อ-นามสกุล, รหัสสมาชิก, จังหวัด หรือเบอร์โทรศัพท์</li>
+                  <li><strong>ตัวเลขนับจำนวนบัตร:</strong> แสดงยอดบัตรทั้งหมดที่ค้นพบในระบบ</li>
+                  <li><strong>ปุ่มดูบัตรขนาดเต็ม / ดาวน์โหลด:</strong> ในการ์ดทุกใบจะมีปุ่มสำหรับคลิกเปิดดูบัตรขนาดเต็มพร้อม QR Code</li>
+                </ul>
+              </div>
+            </section>
+
+            <!-- หมวดที่ 6: หน้ารายละเอียดและดาวน์โหลดบัตรสมาชิก (Member Card Detail & Download) -->
+            <section id="manual-sec-6" class="pt-6 border-t border-gray-100 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">6</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">หน้ารายละเอียดและดาวน์โหลดบัตรสมาชิก (Card Detail & Download)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                แสดงบัตรประจำตัวดิจิทัลฉบับสมบูรณ์ พร้อมระบบออก QR Code สำหรับสแกนตรวจสอบ และปุ่มดาวน์โหลดภาพความละเอียดสูง:
+              </p>
+
+              <!-- ภาพประกอบหน้า 6 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/06_member_detail.png" alt="หน้ารายละเอียดบัตรสมาชิกและดาวน์โหลด" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 6: บัตรประจำตัวสมาชิกดิจิทัลขนาดเต็มพร้อม QR Code และปุ่มดาวน์โหลดรูปภาพ
+                </div>
+              </div>
+
+              <div class="space-y-1.5 text-sm text-gray-700">
+                <p><strong>ฟังก์ชันสำคัญบนบัตร:</strong></p>
+                <ul class="list-disc list-inside space-y-1 pl-2">
+                  <li><strong>QR Code ตรวจสอบสมาชิก:</strong> สแกนเพื่อยืนยันตัวตน ณ จุดลงทะเบียนเข้างานกิจกรรมสมาคม</li>
+                  <li><strong>ดาวน์โหลดบัตรสมาชิก (Save Image):</strong> บันทึกภาพบัตรลงในอุปกรณ์เป็นไฟล์ PNG ความละเอียดสูง 600px คมชัด บรรทัดและฟอนต์ตรงแนว สวยงาม</li>
+                  <li><strong>เปลี่ยนรูปถ่ายบนบัตร:</strong> มีฟังก์ชันเปลี่ยนรูปถ่ายหน้าตรงใหม่ พร้อมครอบรูป AI สะดวกรวดเร็ว</li>
+                </ul>
+              </div>
+            </section>
+
+            <!-- หมวดที่ 7: ระบบฐานข้อมูลและเมนูเจ้าหน้าที่ (Admin & Database Portal) -->
+            <section id="manual-sec-7" class="pt-6 border-t border-gray-100 scroll-mt-20">
+              <div class="flex items-center gap-2.5 pb-2 border-b border-gray-200 mb-4">
+                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-sm">7</span>
+                <h3 class="text-xl sm:text-2xl font-bold text-gray-900">ระบบฐานข้อมูลและเมนูเจ้าหน้าที่ (Admin & Database Portal)</h3>
+              </div>
+              <p class="text-gray-600 mb-4">
+                ศูนย์กลางการจัดการข้อมูลสมาชิกทั้งหมดสำหรับคณะกรรมการและเจ้าหน้าที่สมาคมบอนไซไทย:
+              </p>
+
+              <!-- ภาพประกอบหน้า 7 -->
+              <div class="my-5 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
+                <img src="manual_screenshots/07_members.png" alt="หน้าตารางรายชื่อสมาชิกสำหรับเจ้าหน้าที่" class="w-full h-auto object-cover" />
+                <div class="bg-gray-50 px-4 py-2 text-xs text-gray-500 text-center font-medium border-t border-gray-200">
+                  รูปภาพที่ 7: ตารางบริหารจัดการข้อมูลสมาชิก ค้นหา อนุมัติ และตรวจสอบสลิป
+                </div>
+              </div>
+
+              <div class="space-y-1.5 text-sm text-gray-700">
+                <p><strong>สิทธิ์และความสามารถของเจ้าหน้าที่:</strong></p>
+                <ul class="list-disc list-inside space-y-1 pl-2">
+                  <li><strong>อนุมัติสมาชิก:</strong> คลิกเปลี่ยนสถานะสมาชิกจาก "รออนุมัติ" เป็น "ใช้งานอยู่" ได้ทันที</li>
+                  <li><strong>ตรวจสอบสลิปโอนเงิน:</strong> คลิกดูรูปถ่ายสลิปที่เก็บไว้อย่างปลอดภัยบน Google Drive</li>
+                  <li><strong>ส่งออกข้อมูล (Export CSV):</strong> ดาวน์โหลดไฟล์รายชื่อสมาชิกไปใช้งานต่อใน Excel ได้</li>
+                  <li><strong>ความปลอดภัยสูง:</strong> มีระบบรหัสผ่านแอดมิน ป้องกันบุคคลภายนอกแก้ไขข้อมูล</li>
+                </ul>
+              </div>
+            </section>
+
+            <!-- ท้ายคู่มือ -->
+            <div class="pt-8 border-t-2 border-gray-200 text-center text-xs text-gray-500">
+              <p class="font-bold text-gray-700 text-sm">สมาคมบอนไซไทย (Thai Bonsai Association)</p>
+              <p class="mt-1">ระบบสารสนเทศทะเบียนสมาชิกดิจิทัลและบัตรประจำตัวออนไลน์ © 2026 สงวนลิขสิทธิ์</p>
+              <p class="text-[11px] text-gray-400 mt-1">หากมีข้อสงสัยหรือต้องการความช่วยเหลือ กรุณาติดต่อคณะกรรมการสมาคมฯ</p>
+            </div>
+
+          </div>
         </div>
       </div>
     </main>
@@ -2754,6 +3143,59 @@
           } catch (err) {
             console.error("Download card error:", err);
             this.showToast("เกิดข้อผิดพลาดในการดาวน์โหลดรูปบัตร", "error");
+          } finally {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = origHtml;
+            }
+          }
+        },
+
+        downloadManualPDF: async function () {
+          const content = document.getElementById("manual-printable-content");
+          if (!content) return;
+
+          const btn = document.getElementById("btn-download-manual-pdf");
+          const origHtml = btn ? btn.innerHTML : "";
+          if (btn) {
+            btn.disabled = true;
+            btn.innerHTML =
+              '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> กำลังสร้างไฟล์ PDF...';
+          }
+
+          try {
+            this.showToast("กำลังประมวลผลไฟล์ PDF คู่มือ กรุณารอสักครู่...", "info");
+
+            if (typeof html2pdf !== "undefined") {
+              const opt = {
+                margin: [10, 10, 15, 10],
+                filename: "คู่มือการใช้งาน_ระบบสมาชิกสมาคมบอนไซไทย.pdf",
+                image: { type: "jpeg", quality: 0.98 },
+                html2canvas: {
+                  scale: 2,
+                  useCORS: true,
+                  allowTaint: true,
+                  logging: false,
+                  letterRendering: true,
+                  scrollX: 0,
+                  scrollY: 0,
+                },
+                jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+                pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+              };
+
+              await html2pdf().set(opt).from(content).save();
+              this.showToast("ดาวน์โหลดคู่มือ PDF สำเร็จเรียบร้อยแล้ว!", "success");
+            } else {
+              window.print();
+            }
+          } catch (err) {
+            console.error("PDF generation error:", err);
+            this.showToast(
+              "เกิดข้อผิดพลาดในการสร้าง PDF ระบบจะเปิดหน้าต่างพิมพ์ให้แทน",
+              "warning",
+            );
+            window.print();
           } finally {
             if (btn) {
               btn.disabled = false;
