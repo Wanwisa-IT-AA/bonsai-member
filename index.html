@@ -1438,29 +1438,41 @@
 
       <!-- View: Status Check -->
       <div id="view-status" class="view-section hide">
-        <div class="max-w-xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow">
-          <h2 class="text-2xl font-bold text-center mb-2">
-            <i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i
-            >ตรวจสอบสถานะสมาชิก
-          </h2>
-          <p class="text-center text-sm text-gray-500 mb-6">
-            กรอกเลขประจำตัวสมาชิก, เบอร์โทรศัพท์ หรือ ชื่อ-นามสกุล ที่ใช้ลงทะเบียน
-          </p>
-          <div class="flex gap-2 mb-4">
-            <input
-              type="text"
-              id="status-query"
-              placeholder="ค้นหาด้วย ชื่อ-นามสกุล, TBA-0001 หรือ เบอร์โทร"
-              onkeydown="if(event.key === 'Enter') app.checkStatus()"
-              class="flex-grow px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-            />
-            <button
-              onclick="app.checkStatus()"
-              class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm hover:shadow"
-            >
-              <i class="fa-solid fa-magnifying-glass"></i> ค้นหา
-            </button>
+        <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-md border border-gray-100">
+          <div class="text-center max-w-xl mx-auto mb-8">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-3">
+              <i class="fa-solid fa-magnifying-glass"></i> ระบบสืบค้นและตรวจสอบสถานะสมาชิกดิจิทัล
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              ตรวจสอบสถานะสมาชิก
+            </h2>
+            <p class="text-sm text-gray-500 mt-2">
+              ค้นหาด้วยชื่อ-นามสกุล, เลขประจำตัวสมาชิก (เช่น TBA-0001) หรือ เบอร์โทรศัพท์ที่ใช้ลงทะเบียน
+            </p>
           </div>
+
+          <!-- Search Input Box -->
+          <div class="max-w-2xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-2.5 mb-6">
+              <div class="relative flex-grow">
+                <input
+                  type="text"
+                  id="status-query"
+                  placeholder="พิมพ์ชื่อ-นามสกุล, TBA-0001 หรือ เบอร์โทรศัพท์..."
+                  onkeydown="if(event.key === 'Enter') app.checkStatus()"
+                  class="w-full pl-11 pr-4 py-3 bg-gray-50/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none text-sm sm:text-base transition shadow-2xs"
+                />
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-4 text-gray-400 text-sm"></i>
+              </div>
+              <button
+                onclick="app.checkStatus()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center justify-center gap-2 cursor-pointer shadow-md hover:shadow-lg flex-shrink-0"
+              >
+                <i class="fa-solid fa-magnifying-glass"></i> ค้นหาข้อมูล
+              </button>
+            </div>
+          </div>
+
           <div id="status-result" class="mt-6"></div>
         </div>
       </div>
