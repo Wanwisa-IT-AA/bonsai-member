@@ -1,587 +1,2218 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <title>ระบบทะเบียนสมาชิก สมาคมบอนไซไทย (Thai Bonsai Association)</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Google Fonts: Kanit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
     <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- html2canvas for High Resolution Card Image Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- MediaPipe Face Detection for Auto Face Cropping -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js"
+      crossorigin="anonymous"
+    ></script>
 
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Kanit', 'sans-serif'],
-                    },
-                    colors: {
-                        bonsai: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            700: '#15803d',
-                            800: '#166534',
-                            900: '#14532d',
-                        }
-                    }
-                }
-            }
-        }
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Kanit", "sans-serif"],
+            },
+            colors: {
+              bonsai: {
+                50: "#f0fdf4",
+                100: "#dcfce7",
+                500: "#22c55e",
+                600: "#16a34a",
+                700: "#15803d",
+                800: "#166534",
+                900: "#14532d",
+              },
+            },
+          },
+        },
+      };
     </script>
     <style>
-        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
-        .hide { display: none !important; }
-        .nav-btn.active { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 600; }
-        
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
-            .no-print { display: none !important; }
-        }
-        
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    </style>
-</head>
-<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+      body {
+        font-family: "Kanit", sans-serif;
+        background-color: #f3f4f6;
+      }
+      .hide {
+        display: none !important;
+      }
+      .nav-btn.active {
+        border-bottom: 3px solid #16a34a;
+        color: #16a34a;
+        font-weight: 600;
+      }
 
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #print-area,
+        #print-area * {
+          visibility: visible;
+        }
+        #print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+        .no-print {
+          display: none !important;
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+  <body class="text-gray-800 antialiased min-h-screen flex flex-col">
     <!-- Config Indicator Banner -->
-    <div id="api-config-banner" class="bg-emerald-700 text-white px-4 py-2 text-xs text-center flex justify-between items-center shadow-inner">
-        <span class="flex items-center gap-2">
-            <span class="inline-block w-2 h-2 rounded-full bg-emerald-300 animate-ping"></span>
-            🟢 เชื่อมต่อระบบหลังบ้าน Google Apps Script เรียบร้อยแล้ว (พร้อมใช้งาน)
+    <div
+      id="api-config-banner"
+      class="bg-emerald-700 text-white px-4 py-1.5 text-xs flex justify-between items-center shadow-inner"
+    >
+      <div class="flex items-center gap-2" title="ระบบเชื่อมต่อพร้อมใช้งาน">
+        <span class="relative flex h-2.5 w-2.5">
+          <span
+            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"
+          ></span>
         </span>
-        <button onclick="app.promptApiUrl()" class="underline text-emerald-200 hover:text-white font-mono text-[11px]">เปลี่ยน API URL</button>
+      </div>
+      <button
+        id="btn-change-api"
+        onclick="app.promptApiUrl()"
+        class="admin-only hide underline text-emerald-200 hover:text-white font-mono text-[11px]"
+      >
+        เปลี่ยน API URL
+      </button>
     </div>
 
     <!-- Navigation Header -->
     <nav class="bg-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center cursor-pointer" onclick="app.navigate('home')">
-                    <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow mr-3 overflow-hidden border border-bonsai-100">
-                        <img src="logo.png" alt="สมาคมบอนไซไทย" class="w-full h-full object-contain">
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-lg text-bonsai-800 leading-tight">สมาคมบอนไซไทย</h1>
-                        <p class="text-xs text-gray-500 leading-tight">Thai Bonsai Association</p>
-                    </div>
-                </div>
-                
-                <div class="hidden md:flex space-x-1 items-center">
-                    <button onclick="app.navigate('home')" class="nav-btn nav-home px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"><i class="fa-solid fa-house mr-1"></i> หน้าแรก</button>
-                    <button onclick="app.navigate('register')" class="nav-btn nav-register px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"><i class="fa-solid fa-user-plus mr-1"></i> สมัครสมาชิก</button>
-                    <button onclick="app.navigate('members')" class="nav-btn nav-members px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"><i class="fa-solid fa-users mr-1"></i> รายชื่อสมาชิก</button>
-                    <button onclick="app.navigate('payment')" class="nav-btn nav-payment px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"><i class="fa-solid fa-file-invoice-dollar mr-1"></i> แจ้งชำระเงิน</button>
-                    <button onclick="app.navigate('status')" class="nav-btn nav-status px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"><i class="fa-solid fa-magnifying-glass mr-1"></i> ตรวจสอบสถานะ</button>
-                    <button onclick="app.navigate('admin')" class="nav-btn nav-admin ml-4 px-4 py-2 rounded-md text-sm bg-gray-800 text-white hover:bg-gray-700 transition shadow"><i class="fa-solid fa-lock mr-1"></i> Admin</button>
-                </div>
-
-                <div class="flex items-center md:hidden">
-                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-gray-600 hover:text-bonsai-600 focus:outline-none">
-                        <i class="fa-solid fa-bars text-2xl"></i>
-                    </button>
-                </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div
+            class="flex items-center cursor-pointer"
+            onclick="app.navigate('home')"
+          >
+            <div
+              class="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow mr-3 overflow-hidden border border-bonsai-100"
+            >
+              <img
+                src="logo.png"
+                alt="สมาคมบอนไซไทย"
+                class="w-full h-full object-contain"
+              />
             </div>
+            <div>
+              <h1 class="font-bold text-lg text-bonsai-800 leading-tight">
+                สมาคมบอนไซไทย
+              </h1>
+              <p class="text-xs text-gray-500 leading-tight">
+                Thai Bonsai Association
+              </p>
+            </div>
+          </div>
+
+          <div class="hidden md:flex space-x-1 items-center">
+            <button
+              onclick="app.navigate('home')"
+              class="nav-btn nav-home px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
+            >
+              <i class="fa-solid fa-house mr-1"></i> หน้าแรก
+            </button>
+            <button
+              onclick="app.navigate('register')"
+              class="nav-btn nav-register px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
+            >
+              <i class="fa-solid fa-user-plus mr-1"></i> สมัครสมาชิก
+            </button>
+            <button
+              onclick="app.navigate('members')"
+              class="nav-btn nav-members px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
+            >
+              <i class="fa-solid fa-users mr-1"></i> รายชื่อสมาชิก
+            </button>
+            <button
+              onclick="app.navigate('all-cards')"
+              class="nav-btn nav-all-cards px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
+            >
+              <i class="fa-solid fa-id-card mr-1"></i> บัตรสมาชิก
+            </button>
+            <button
+              onclick="app.navigate('payment')"
+              class="nav-btn nav-payment px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
+            >
+              <i class="fa-solid fa-file-invoice-dollar mr-1"></i> แจ้งชำระเงิน
+            </button>
+            <button
+              onclick="app.navigate('status')"
+              class="nav-btn nav-status px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
+            >
+              <i class="fa-solid fa-magnifying-glass mr-1"></i> ตรวจสอบสถานะ
+            </button>
+
+            <!-- Admin Only Buttons (Visible only when logged in as admin) -->
+            <button
+              id="nav-admin-btn"
+              onclick="app.navigate('admin')"
+              class="admin-only hide nav-btn nav-admin ml-2 px-3 py-2 rounded-md text-sm bg-gray-800 text-white hover:bg-gray-700 transition shadow"
+            >
+              <i class="fa-solid fa-shield-halved mr-1"></i> Admin
+            </button>
+            <button
+              id="nav-logout-btn"
+              onclick="app.logout()"
+              class="admin-only hide ml-1 px-2.5 py-1.5 rounded-md text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 transition"
+              title="ออกจากระบบแอดมิน"
+            >
+              <i class="fa-solid fa-right-from-bracket mr-1"></i> ออกจากระบบ
+            </button>
+
+            <!-- Guest Only Button (Login) -->
+            <button
+              id="nav-login-btn"
+              onclick="app.openLoginModal()"
+              class="guest-only ml-2 px-3 py-1.5 rounded-md text-sm text-gray-600 hover:text-bonsai-700 hover:bg-gray-100 transition flex items-center gap-1.5 border border-gray-200"
+            >
+              <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+              เข้าสู่ระบบ
+            </button>
+          </div>
+
+          <div class="flex items-center md:hidden">
+            <button
+              onclick="
+                document
+                  .getElementById('mobile-menu')
+                  .classList.toggle('hidden')
+              "
+              class="text-gray-600 hover:text-bonsai-600 focus:outline-none"
+            >
+              <i class="fa-solid fa-bars text-2xl"></i>
+            </button>
+          </div>
         </div>
-        
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100 pb-3 shadow-inner">
-            <button onclick="app.navigate('home'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50">หน้าแรก</button>
-            <button onclick="app.navigate('register'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50">สมัครสมาชิก</button>
-            <button onclick="app.navigate('members'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50">รายชื่อสมาชิก</button>
-            <button onclick="app.navigate('payment'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50">แจ้งชำระเงิน</button>
-            <button onclick="app.navigate('status'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50">ตรวจสอบสถานะ</button>
-            <button onclick="app.navigate('admin'); document.getElementById('mobile-menu').classList.add('hidden')" class="block w-full text-left px-4 py-3 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200">Admin Dashboard</button>
-        </div>
+      </div>
+
+      <div
+        id="mobile-menu"
+        class="hidden md:hidden bg-white border-t border-gray-100 pb-3 shadow-inner"
+      >
+        <button
+          onclick="
+            app.navigate('home');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50"
+        >
+          หน้าแรก
+        </button>
+        <button
+          onclick="
+            app.navigate('register');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50"
+        >
+          สมัครสมาชิก
+        </button>
+        <button
+          onclick="
+            app.navigate('members');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50"
+        >
+          รายชื่อสมาชิก
+        </button>
+        <button
+          onclick="
+            app.navigate('all-cards');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50"
+        >
+          บัตรสมาชิกทั้งหมด
+        </button>
+        <button
+          onclick="
+            app.navigate('payment');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50"
+        >
+          แจ้งชำระเงิน
+        </button>
+        <button
+          onclick="
+            app.navigate('status');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="block w-full text-left px-4 py-3 text-sm hover:bg-bonsai-50"
+        >
+          ตรวจสอบสถานะ
+        </button>
+
+        <!-- Mobile Admin Only -->
+        <button
+          id="mobile-admin-btn"
+          onclick="
+            app.navigate('admin');
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="admin-only hide block w-full text-left px-4 py-3 text-sm font-bold text-gray-700 bg-gray-100 hover:bg-gray-200"
+        >
+          <i class="fa-solid fa-shield-halved mr-1"></i> Admin Dashboard
+        </button>
+        <button
+          id="mobile-logout-btn"
+          onclick="
+            app.logout();
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="admin-only hide block w-full text-left px-4 py-3 text-sm text-rose-600 hover:bg-rose-50"
+        >
+          <i class="fa-solid fa-right-from-bracket mr-1"></i> ออกจากระบบแอดมิน
+        </button>
+
+        <!-- Mobile Guest Login -->
+        <button
+          id="mobile-login-btn"
+          onclick="
+            app.openLoginModal();
+            document.getElementById('mobile-menu').classList.add('hidden');
+          "
+          class="guest-only block w-full text-left px-4 py-3 text-sm text-gray-600 hover:bg-gray-100"
+        >
+          <i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>
+          เข้าสู่ระบบเจ้าหน้าที่
+        </button>
+      </div>
     </nav>
 
     <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        
-        <!-- View: Home -->
-        <div id="view-home" class="view-section">
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden mb-8 relative">
-                <div class="relative px-6 py-12 sm:px-12 lg:px-16 text-center lg:text-left flex flex-col lg:flex-row items-center">
-                    <div class="lg:w-2/3 lg:pr-8">
-                        <span class="inline-block py-1 px-3 rounded-full bg-bonsai-100 text-bonsai-800 text-sm font-semibold mb-4 border border-bonsai-200">ระบบลงทะเบียนสมาชิกออนไลน์</span>
-                        <h2 class="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">ยินดีต้อนรับสู่ระบบสมาชิก<br><span class="text-bonsai-600">สมาคมบอนไซไทย</span></h2>
-                        <p class="text-lg text-gray-600 mb-8 max-w-2xl">กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน เพื่อประโยชน์ในการออกบัตรสมาชิกประจำตัวดิจิทัล (QR Code) การเข้าร่วมกิจกรรม และการรับข่าวสารจากทางสมาคม</p>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <button onclick="app.navigate('register')" class="flex flex-col items-center justify-center p-4 bg-bonsai-600 text-white rounded-xl shadow hover:bg-bonsai-700 transition">
-                                <i class="fa-solid fa-user-plus text-2xl mb-2"></i>
-                                <span class="font-semibold">สมัครสมาชิกใหม่</span>
-                            </button>
-                            <button onclick="app.navigate('payment')" class="flex flex-col items-center justify-center p-4 bg-yellow-500 text-white rounded-xl shadow hover:bg-yellow-600 transition">
-                                <i class="fa-solid fa-file-invoice-dollar text-2xl mb-2"></i>
-                                <span class="font-semibold">แจ้งชำระเงิน</span>
-                            </button>
-                            <button onclick="app.navigate('status')" class="flex flex-col items-center justify-center p-4 bg-blue-500 text-white rounded-xl shadow hover:bg-blue-600 transition">
-                                <i class="fa-solid fa-magnifying-glass text-2xl mb-2"></i>
-                                <span class="font-semibold">ตรวจสอบสถานะ</span>
-                            </button>
-                        </div>
+      <!-- View: Home -->
+      <div id="view-home" class="view-section">
+        <div
+          class="bg-white rounded-2xl shadow-xl overflow-hidden mb-8 relative"
+        >
+          <div
+            class="relative px-6 py-12 sm:px-12 lg:px-16 text-center lg:text-left flex flex-col lg:flex-row items-center"
+          >
+            <div class="lg:w-2/3 lg:pr-8 xl:pr-12">
+              <span
+                class="inline-block py-1 px-3 rounded-full bg-bonsai-100 text-bonsai-800 text-sm font-semibold mb-4 border border-bonsai-200"
+                >ระบบลงทะเบียนสมาชิกออนไลน์</span
+              >
+              <h2 class="flex flex-col gap-2.5 sm:gap-3 text-gray-900 mb-8">
+                <span class="text-3xl md:text-5xl font-bold leading-tight">
+                  ยินดีต้อนรับสู่ระบบสมาชิก
+                </span>
+                <span class="text-3xl md:text-5xl font-extrabold text-bonsai-600 leading-tight">
+                  สมาคมบอนไซไทย
+                </span>
+                <span class="text-lg md:text-xl font-normal text-gray-500 tracking-wide mt-1">
+                  Thai Bonsai Association
+                </span>
+              </h2>
+              <p class="text-lg text-gray-600 mb-8 max-w-2xl">
+                กรุณากรอกข้อมูลให้ถูกต้องครบถ้วน 
+                เพื่อประโยชน์ในการออกบัตรสมาชิกประจำตัวดิจิทัล    
+                การเข้าร่วมกิจกรรม และการรับข่าวสารจากทางสมาคม
+              </p>
+
+              <!-- 5 รายการจัดเป็น 2 แถว สัดส่วนสวยงาม ลายเส้นเหมือนการ์ดสมาชิก สีสันแตกต่างกัน -->
+              <!-- 5 รายการจัดเป็น 2 แถว สัดส่วนสวยงาม โทนสีสดใสสว่าง ลายเส้นเหมือนการ์ดสมาชิก ไม่ทึบ -->
+              <div class="grid grid-cols-1 sm:grid-cols-6 gap-3.5 sm:gap-4">
+                <!-- แถวที่ 1: รายการหลัก 3 รายการ (กว้างคนละ 2/6 ส่วน) -->
+                <!-- 1. สมัครสมาชิกใหม่ (เขียวมรกตสดใสสว่าง) -->
+                <button
+                  type="button"
+                  onclick="app.navigate('register')"
+                  class="sm:col-span-2 relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-lg shadow-emerald-600/25 hover:shadow-xl hover:shadow-emerald-600/35 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center text-center group border border-emerald-300/40 cursor-pointer"
+                  style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"
+                >
+                  <!-- ลายเส้นไม้เหมือนการ์ดสมาชิก (Wood-grain texture) -->
+                  <div
+                    class="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay group-hover:opacity-40 transition-opacity duration-300"
+                    style="
+                      background-image: url('card-header-bg.png');
+                      background-repeat: repeat;
+                      background-size: auto 100%;
+                      background-position: center;
+                      filter: brightness(130%) contrast(120%);
+                    "
+                  ></div>
+                  <!-- Bright gloss highlight (ทำให้สีสว่าง สดใส มีมิติ) -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/25 pointer-events-none"></div>
+
+                  <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-xl bg-white/25 flex items-center justify-center mb-2.5 shadow-md group-hover:scale-110 transition-transform duration-300 backdrop-blur-xs border border-white/40">
+                      <i class="fa-solid fa-user-plus text-xl text-white"></i>
                     </div>
-                    <div class="lg:w-1/3 mt-10 lg:mt-0 flex justify-center">
-                        <div class="w-64 h-64 md:w-80 md:h-80 bg-white rounded-full border-8 border-bonsai-100 shadow-2xl flex items-center justify-center overflow-hidden p-8 relative">
-                            <img src="logo.png" alt="สมาคมบอนไซไทย" class="w-full h-full object-contain">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- View: Register -->
-        <div id="view-register" class="view-section hide">
-            <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-                <div class="border-b pb-4 mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-user-plus text-bonsai-600 mr-2"></i>แบบฟอร์มสมัครสมาชิก</h2>
-                    <p class="text-gray-500 text-sm mt-1">กรุณากรอกข้อมูลของท่านให้ครบถ้วน ข้อมูลจะถูกส่งไปบันทึกในฐานข้อมูล Google Sheets และไฟล์รูปภาพจะเก็บใน Google Drive ของสมาคมฯ</p>
-                </div>
-
-                <form id="form-register" onsubmit="app.handleRegister(event)">
-                    
-                    <h3 class="text-lg font-semibold text-bonsai-700 mb-4 bg-bonsai-50 inline-block px-3 py-1 rounded">1. ข้อมูลส่วนตัว</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ <span class="text-red-500">*</span></label>
-                            <input type="text" id="reg-firstname" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล <span class="text-red-500">*</span></label>
-                            <input type="text" id="reg-lastname" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อเล่น</label>
-                            <input type="text" id="reg-nickname" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">เลขประจำตัวประชาชน <span class="text-red-500">*</span></label>
-                            <input type="text" id="reg-idcard" required pattern="\d{13}" maxlength="13" placeholder="เลข 13 หลัก" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
-                            <input type="tel" id="reg-phone" required placeholder="08XXXXXXXX" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">จังหวัด <span class="text-red-500">*</span></label>
-                            <select id="reg-province" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"></select>
-                        </div>
-                    </div>
-
-                    <h3 class="text-lg font-semibold text-bonsai-700 mb-4 bg-bonsai-50 inline-block px-3 py-1 rounded">2. อัปโหลดรูปภาพ</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 relative">
-                            <i class="fa-solid fa-camera text-3xl text-gray-400 mb-2"></i>
-                            <p class="text-sm font-medium text-gray-700">อัปโหลดรูปหน้าตรง <span class="text-red-500">*</span></p>
-                            <p class="text-xs text-gray-400 mt-1">ใช้สำหรับทำบัตรสมาชิก</p>
-                            <input type="file" id="reg-photo" required accept="image/*" onchange="app.previewFileName(this, 'reg-photo-label')" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                            <div id="reg-photo-label" class="mt-2 text-xs text-bonsai-600 font-semibold"></div>
-                        </div>
-
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 relative">
-                            <i class="fa-solid fa-id-card text-3xl text-gray-400 mb-2"></i>
-                            <p class="text-sm font-medium text-gray-700">รูปถ่ายบัตรประชาชน (ตัวเลือก)</p>
-                            <p class="text-xs text-gray-400 mt-1">ใช้ยืนยันตัวตนสำหรับสมาคม</p>
-                            <input type="file" id="reg-idphoto" accept="image/*" onchange="app.previewFileName(this, 'reg-idphoto-label')" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                            <div id="reg-idphoto-label" class="mt-2 text-xs text-bonsai-600 font-semibold"></div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end border-t pt-6">
-                        <button type="submit" id="btn-submit-reg" class="bg-bonsai-600 text-white px-8 py-3 rounded-lg font-bold shadow hover:bg-bonsai-700 flex items-center transition">
-                            <i class="fa-solid fa-paper-plane mr-2"></i> ยืนยันการสมัครสมาชิก
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- View: Members List -->
-        <div id="view-members" class="view-section hide">
-            <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-users text-bonsai-600 mr-2"></i>รายชื่อสมาชิกทั้งหมด</h2>
-                        <p class="text-sm text-gray-500">ข้อมูลดึงตรงจากฐานข้อมูล Google Sheets</p>
-                    </div>
-                    <button onclick="app.fetchMembersFromApi()" class="mt-2 md:mt-0 bg-bonsai-50 text-bonsai-700 px-4 py-2 rounded-lg font-semibold hover:bg-bonsai-100 transition flex items-center text-sm">
-                        <i class="fa-solid fa-rotate mr-2"></i> รีเฟรชข้อมูล
-                    </button>
-                </div>
-                
-                <div class="overflow-x-auto rounded-lg border">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">เลขสมาชิก</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ - นามสกุล</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">จังหวัด</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">บัตรสมาชิก</th>
-                            </tr>
-                        </thead>
-                        <tbody id="members-table-body" class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td colspan="5" class="text-center py-8 text-gray-400">
-                                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
-                                    <div>กำลังโหลดข้อมูลจาก Google Sheets...</div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- View: Payment -->
-        <div id="view-payment" class="view-section hide">
-            <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-md p-6 sm:p-8">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2"><i class="fa-solid fa-file-invoice-dollar text-yellow-500 mr-2"></i>แจ้งชำระเงิน / สลิป</h2>
-                <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6 text-sm text-amber-900">
-                    <p class="font-bold mb-1"><i class="fa-solid fa-building-columns mr-1"></i> บัญชีธนาคารสำหรับโอนเงิน:</p>
-                    <p>ธนาคารกสิกรไทย (KBANK)</p>
-                    <p>ชื่อบัญชี: <strong>สมาคมบอนไซไทย</strong></p>
-                    <p>เลขที่บัญชี: <strong>123-4-56789-0</strong></p>
-                </div>
-
-                <form id="form-payment" onsubmit="app.handlePayment(event)">
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">เลขสมาชิก หรือ เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
-                            <input type="text" id="pay-member-id" required placeholder="เช่น TBA-123456 หรือ 0812345678" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">จำนวนเงินที่โอน (บาท) <span class="text-red-500">*</span></label>
-                            <input type="number" id="pay-amount" required min="1" placeholder="500" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">แนบหลักฐานสลิปการโอนเงิน <span class="text-red-500">*</span></label>
-                            <input type="file" id="pay-slip" required accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-yellow-50 file:text-yellow-700 border p-1 rounded-lg">
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6">
-                        <button type="submit" id="btn-submit-pay" class="w-full bg-yellow-500 text-white px-4 py-3 rounded-lg font-bold shadow hover:bg-yellow-600 transition flex justify-center items-center">
-                            <i class="fa-solid fa-upload mr-2"></i> ส่งข้อมูลแจ้งชำระเงิน
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- View: Member Detail Card -->
-        <div id="view-member-detail" class="view-section hide">
-            <div class="max-w-3xl mx-auto">
-                <div class="mb-4 flex justify-between items-center no-print">
-                    <button onclick="app.navigate('members')" class="text-gray-500 hover:text-bonsai-600"><i class="fa-solid fa-arrow-left mr-1"></i> ย้อนกลับ</button>
-                    <button onclick="window.print()" class="bg-gray-800 text-white px-4 py-2 rounded shadow text-sm hover:bg-gray-700"><i class="fa-solid fa-print mr-1"></i> พิมพ์บัตรสมาชิก</button>
-                </div>
-
-                <div id="print-area" class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
-                    <div class="bg-gradient-to-r from-bonsai-700 to-bonsai-900 text-white p-6 flex justify-between items-center">
-                        <div class="flex items-center">
-                            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1 shadow mr-3 overflow-hidden">
-                                <img src="logo.png" alt="สมาคมบอนไซไทย" class="w-full h-full object-contain">
-                            </div>
-                            <div>
-                                <h2 class="text-xl font-bold leading-none">สมาคมบอนไซไทย</h2>
-                                <p class="text-xs opacity-80">Thai Bonsai Association</p>
-                            </div>
-                        </div>
-                        <span class="text-xs uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full font-semibold">Member Card</span>
-                    </div>
-
-                    <div class="p-8 flex flex-col sm:flex-row gap-8 relative bg-white">
-                        <div class="flex-shrink-0 flex flex-col items-center">
-                            <div class="w-36 h-44 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 shadow">
-                                <img id="card-photo" src="https://via.placeholder.com/150x200?text=Photo" class="w-full h-full object-cover">
-                            </div>
-                            <div class="mt-4 bg-white p-2 rounded shadow border">
-                                <img id="card-qrcode" src="" class="w-24 h-24">
-                            </div>
-                        </div>
-
-                        <div class="flex-grow">
-                            <div class="mb-6">
-                                <div class="text-xs text-gray-500 uppercase font-semibold">ชื่อ-นามสกุล / Name</div>
-                                <div class="text-2xl font-bold text-gray-900" id="card-name">-</div>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-y-4 gap-x-8 mb-6">
-                                <div>
-                                    <div class="text-xs text-gray-500 uppercase font-semibold">เลขสมาชิก / ID</div>
-                                    <div class="font-bold text-lg text-bonsai-700 font-mono" id="card-id">-</div>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-gray-500 uppercase font-semibold">จังหวัด / Province</div>
-                                    <div class="font-medium text-gray-800" id="card-province">-</div>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-gray-500 uppercase font-semibold">วันที่สมัคร / Issued</div>
-                                    <div class="font-medium text-gray-800" id="card-join-date">-</div>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-gray-500 uppercase font-semibold">สถานะ / Status</div>
-                                    <div id="card-status-badge" class="mt-1"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- View: Admin Dashboard -->
-        <div id="view-admin" class="view-section hide">
-            <div class="mb-6 flex justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-shield-halved text-gray-700 mr-2"></i>ผู้ดูแลระบบ (Admin)</h2>
-                    <p class="text-sm text-gray-500">ตรวจสอบสลิปและอนุมัติสถานะสมาชิก</p>
-                </div>
-                <button onclick="app.fetchMembersFromApi()" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700">
-                    <i class="fa-solid fa-rotate mr-1"></i> โหลดข้อมูลใหม่
+                    <span class="font-bold text-base sm:text-lg tracking-wide drop-shadow">สมัครสมาชิกใหม่</span>
+                    <span class="text-xs text-emerald-100 font-medium mt-0.5">ลงทะเบียนออนไลน์</span>
+                  </div>
                 </button>
-            </div>
-            <div class="bg-white rounded-xl shadow overflow-hidden border">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รหัสสมาชิก</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ชื่อ - นามสกุล</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รูปถ่าย / สลิป</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-table-body" class="divide-y divide-gray-100 bg-white"></tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- View: Status Check -->
-        <div id="view-status" class="view-section hide">
-            <div class="max-w-xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow">
-                <h2 class="text-2xl font-bold text-center mb-2"><i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i>ตรวจสอบสถานะสมาชิก</h2>
-                <p class="text-center text-sm text-gray-500 mb-6">กรอกเลขประจำตัวสมาชิก หรือ เบอร์โทรศัพท์ที่ใช้ลงทะเบียน</p>
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="status-query" placeholder="เช่น TBA-123456 หรือ 0812345678" class="flex-grow px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                    <button onclick="app.checkStatus()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition">ค้นหา</button>
+                <!-- 2. แจ้งชำระเงิน (ทองอำพันสว่างประกาย) -->
+                <button
+                  type="button"
+                  onclick="app.navigate('payment')"
+                  class="sm:col-span-2 relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center text-center group border border-amber-200/50 cursor-pointer"
+                  style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);"
+                >
+                  <!-- ลายเส้นไม้เหมือนการ์ดสมาชิก (Wood-grain texture) -->
+                  <div
+                    class="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay group-hover:opacity-40 transition-opacity duration-300"
+                    style="
+                      background-image: url('card-header-bg.png');
+                      background-repeat: repeat;
+                      background-size: auto 100%;
+                      background-position: center;
+                      filter: brightness(130%) contrast(120%);
+                    "
+                  ></div>
+                  <!-- Bright gloss highlight -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/25 pointer-events-none"></div>
+
+                  <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-xl bg-white/25 flex items-center justify-center mb-2.5 shadow-md group-hover:scale-110 transition-transform duration-300 backdrop-blur-xs border border-white/40">
+                      <i class="fa-solid fa-file-invoice-dollar text-xl text-white"></i>
+                    </div>
+                    <span class="font-bold text-base sm:text-lg tracking-wide drop-shadow">แจ้งชำระเงิน</span>
+                    <span class="text-xs text-amber-100 font-medium mt-0.5">แนบหลักฐานการโอน</span>
+                  </div>
+                </button>
+
+                <!-- 3. ตรวจสอบสถานะ (ฟ้าครามสว่างสดใส) -->
+                <button
+                  type="button"
+                  onclick="app.navigate('status')"
+                  class="sm:col-span-2 relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-lg shadow-sky-500/25 hover:shadow-xl hover:shadow-sky-500/35 hover:-translate-y-1 transition-all duration-300 flex flex-col items-center justify-center text-center group border border-sky-200/50 cursor-pointer"
+                  style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);"
+                >
+                  <!-- ลายเส้นไม้เหมือนการ์ดสมาชิก (Wood-grain texture) -->
+                  <div
+                    class="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay group-hover:opacity-40 transition-opacity duration-300"
+                    style="
+                      background-image: url('card-header-bg.png');
+                      background-repeat: repeat;
+                      background-size: auto 100%;
+                      background-position: center;
+                      filter: brightness(130%) contrast(120%);
+                    "
+                  ></div>
+                  <!-- Bright gloss highlight -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/25 pointer-events-none"></div>
+
+                  <div class="relative z-10 flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-xl bg-white/25 flex items-center justify-center mb-2.5 shadow-md group-hover:scale-110 transition-transform duration-300 backdrop-blur-xs border border-white/40">
+                      <i class="fa-solid fa-magnifying-glass text-xl text-white"></i>
+                    </div>
+                    <span class="font-bold text-base sm:text-lg tracking-wide drop-shadow">ตรวจสอบสถานะ</span>
+                    <span class="text-xs text-sky-100 font-medium mt-0.5">เช็คผลการสมัคร / บัตร</span>
+                  </div>
+                </button>
+
+                <!-- แถวที่ 2: 2 รายการ (กว้างคนละ 3/6 ส่วน = 50% ต่อรายการในจอเดสก์ท็อป) -->
+                <!-- 4. บัตรสมาชิก (ม่วงไวโอเล็ตสดใสพรีเมียม) -->
+                <button
+                  type="button"
+                  onclick="app.navigate('all-cards')"
+                  class="sm:col-span-3 relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/35 hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group border border-purple-200/50 cursor-pointer text-left"
+                  style="background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);"
+                >
+                  <!-- ลายเส้นไม้เหมือนการ์ดสมาชิก (Wood-grain texture) -->
+                  <div
+                    class="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay group-hover:opacity-40 transition-opacity duration-300"
+                    style="
+                      background-image: url('card-header-bg.png');
+                      background-repeat: repeat;
+                      background-size: auto 100%;
+                      background-position: center;
+                      filter: brightness(130%) contrast(120%);
+                    "
+                  ></div>
+                  <!-- Watermark tree faint silhouette -->
+                  <div class="absolute -right-4 -bottom-6 w-32 h-32 pointer-events-none opacity-15">
+                    <img src="watermark-tree.png" alt="watermark" class="w-full h-full object-contain filter invert brightness-200">
+                  </div>
+                  <!-- Bright gloss highlight -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20 pointer-events-none"></div>
+
+                  <div class="relative z-10 flex items-center gap-3.5 sm:gap-4">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/25 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 backdrop-blur-xs border border-white/40 flex-shrink-0">
+                      <i class="fa-solid fa-id-card text-2xl text-white"></i>
+                    </div>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-base sm:text-lg tracking-wide drop-shadow">บัตรสมาชิก</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/25 text-white border border-white/35 shadow-xs">ดิจิทัล</span>
+                      </div>
+                      <p class="text-xs sm:text-sm text-purple-100 font-normal mt-0.5">
+                        คลิกเพื่อดูบัตรสมาชิกทุกคนในระบบ
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="relative z-10 hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/25 text-xs font-bold text-white group-hover:bg-white/35 transition border border-white/30 shadow-xs">
+                    <span>OPEN</span>
+                    <i class="fa-solid fa-arrow-right text-[11px] group-hover:translate-x-1 transition-transform"></i>
+                  </div>
+                </button>
+
+                <!-- 5. สมาชิกทั้งหมด (กุหลาบทับทิมสดใส / Ruby Rose - สว่างสดใส โดดเด่น) -->
+                <div
+                  onclick="app.navigate('members')"
+                  class="sm:col-span-3 relative overflow-hidden rounded-2xl p-4 sm:p-5 text-white shadow-lg shadow-rose-500/25 hover:shadow-xl hover:shadow-rose-500/35 hover:-translate-y-1 transition-all duration-300 flex items-center justify-between group border border-rose-200/50 cursor-pointer"
+                  style="background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);"
+                  title="คลิกเพื่อดูรายชื่อสมาชิกทั้งหมด"
+                >
+                  <!-- ลายเส้นไม้เหมือนการ์ดสมาชิก (Wood-grain texture) -->
+                  <div
+                    class="absolute inset-0 pointer-events-none opacity-25 mix-blend-overlay group-hover:opacity-40 transition-opacity duration-300"
+                    style="
+                      background-image: url('card-header-bg.png');
+                      background-repeat: repeat;
+                      background-size: auto 100%;
+                      background-position: center;
+                      filter: brightness(130%) contrast(120%);
+                    "
+                  ></div>
+                  <!-- Watermark tree faint silhouette -->
+                  <div class="absolute -right-4 -bottom-6 w-32 h-32 pointer-events-none opacity-15">
+                    <img src="watermark-tree.png" alt="watermark" class="w-full h-full object-contain filter invert brightness-200">
+                  </div>
+                  <!-- Bright gloss highlight -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-white/20 pointer-events-none"></div>
+
+                  <div class="relative z-10 flex items-center gap-3.5 sm:gap-4">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/25 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 backdrop-blur-xs border border-white/40 flex-shrink-0">
+                      <i class="fa-solid fa-users text-2xl text-white"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs text-rose-100 font-medium flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                        สมาชิกทั้งหมดในระบบ
+                      </div>
+                      <div class="flex items-baseline gap-1.5 mt-0.5">
+                        <span id="home-total-members" class="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow">0</span>
+                        <span class="text-xs sm:text-sm font-semibold text-rose-100">คน</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="relative z-10 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/25 text-xs font-bold text-white group-hover:bg-white/35 transition border border-white/30 shadow-xs">
+                    <span>ดูรายชื่อ</span>
+                    <i class="fa-solid fa-chevron-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                  </div>
                 </div>
-                <div id="status-result" class="mt-6"></div>
+              </div>
             </div>
-        </div>
+            <!-- คอลัมน์ขวา 1 ใน 3 ส่วน: โลโก้ขนาดกะทัดรัดแสงนุ่มนวลด้านบน รูปคนขยายใหญ่ชิดขอบล่างสุด -->
+            <div class="lg:w-1/3 mt-8 lg:mt-0 flex flex-col items-center justify-between self-stretch relative w-full -mb-12 sm:-mb-12 lg:-mb-16 overflow-visible">
+              <!-- Soft atmospheric glow aura -->
+              <div class="absolute inset-0 bg-gradient-to-b from-emerald-100/50 via-amber-50/20 to-transparent rounded-3xl -z-10 filter blur-3xl transform scale-95 pointer-events-none"></div>
 
+              <!-- 1. โลโก้กลมกลืน ไร้ขอบสี่เหลี่ยมโผล่ พร้อมขอบสามมิติ (3D Beveled Medallion) -->
+              <div class="flex flex-col items-center mb-1 sm:mb-2 pt-1 z-10">
+                <div
+                  class="w-40 h-40 sm:w-48 sm:h-48 md:w-52 md:h-52 bg-white rounded-full overflow-hidden flex items-center justify-center p-5 sm:p-6 transition-all duration-300 hover:scale-105 relative"
+                  style="
+                    border: 4px solid #10b981;
+                    box-shadow: 
+                      0 12px 24px -4px rgba(0, 0, 0, 0.14),
+                      0 4px 10px -2px rgba(16, 185, 129, 0.2),
+                      0 0 0 2px #ecfdf5,
+                      0 0 0 4px rgba(16, 185, 129, 0.25),
+                      inset 0 2px 5px rgba(255, 255, 255, 0.95),
+                      inset 0 -3px 6px rgba(4, 120, 87, 0.25);
+                  "
+                >
+                  <img
+                    src="logo.png"
+                    alt="สมาคมบอนไซไทย"
+                    class="max-w-[90%] max-h-[90%] object-contain select-none"
+                    style="mix-blend-mode: multiply;"
+                  />
+                </div>
+              </div>
+
+              <!-- 2. รูปคนและบอนไซขยายขนาดใหญ่ขึ้น ชิดขอบล่างสุดของกรอบ -->
+              <div class="relative w-full flex items-end justify-center mt-auto overflow-visible">
+                <img
+                  src="hero-bonsai-bg.png"
+                  alt="สมาคมบอนไซไทย - บุคคลและต้นบอนไซ"
+                  class="w-full sm:w-[115%] lg:w-[125%] max-w-none h-auto max-h-[420px] sm:max-h-[480px] md:max-h-[520px] object-contain object-bottom drop-shadow-2xl select-none block transition-transform duration-500 hover:scale-[1.02]"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: Register -->
+      <div id="view-register" class="view-section hide">
+        <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+          <div class="border-b pb-4 mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">
+              <i class="fa-solid fa-user-plus text-bonsai-600 mr-2"></i
+              >แบบฟอร์มสมัครสมาชิก
+            </h2>
+            <p class="text-gray-500 text-sm mt-1">
+              กรุณากรอกข้อมูลของท่านให้ครบถ้วน ข้อมูลจะถูกส่งไปบันทึกในฐานข้อมูล
+              Google Sheets และไฟล์รูปภาพจะเก็บใน Google Drive ของสมาคมฯ
+            </p>
+          </div>
+
+          <form id="form-register" onsubmit="app.handleRegister(event)">
+            <h3
+              class="text-lg font-semibold text-bonsai-700 mb-4 bg-bonsai-50 inline-block px-3 py-1 rounded"
+            >
+              1. ข้อมูลส่วนตัว
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >ชื่อ <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="text"
+                  id="reg-firstname"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >นามสกุล <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="text"
+                  id="reg-lastname"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >ชื่อเล่น</label
+                >
+                <input
+                  type="text"
+                  id="reg-nickname"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >เลขประจำตัวประชาชน <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="text"
+                  id="reg-idcard"
+                  required
+                  pattern="\d{13}"
+                  maxlength="13"
+                  placeholder="เลข 13 หลัก"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >เบอร์โทรศัพท์ <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="tel"
+                  id="reg-phone"
+                  required
+                  placeholder="08XXXXXXXX"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >จังหวัด <span class="text-red-500">*</span></label
+                >
+                <select
+                  id="reg-province"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                ></select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >วันออกบัตร <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="date"
+                  id="reg-issue-date"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >วันหมดอายุบัตร <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="date"
+                  id="reg-expire-date"
+                  required
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <h3
+              class="text-lg font-semibold text-bonsai-700 mb-4 bg-bonsai-50 inline-block px-3 py-1 rounded"
+            >
+              2. อัปโหลดรูปภาพ
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div
+                class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 relative group transition"
+              >
+                <div
+                  id="reg-photo-preview-box"
+                  class="flex flex-col items-center justify-center pointer-events-none"
+                >
+                  <i class="fa-solid fa-camera text-3xl text-gray-400 mb-2"></i>
+                  <p class="text-sm font-medium text-gray-700">
+                    อัปโหลดรูปหน้าตรง <span class="text-red-500">*</span>
+                  </p>
+                  <p class="text-xs text-gray-400 mt-1">
+                    AI MediaPipe จะตรวจจับและครอบเฉพาะใบหน้าให้อัตโนมัติ
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  id="reg-photo"
+                  required
+                  accept="image/*"
+                  onchange="app.onRegPhotoSelected(this)"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div
+                  id="reg-photo-label"
+                  class="mt-2 text-xs text-bonsai-600 font-semibold"
+                ></div>
+              </div>
+
+              <div
+                class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:bg-gray-50 relative"
+              >
+                <i class="fa-solid fa-id-card text-3xl text-gray-400 mb-2"></i>
+                <p class="text-sm font-medium text-gray-700">
+                  รูปถ่ายบัตรประชาชน (ตัวเลือก)
+                </p>
+                <p class="text-xs text-gray-400 mt-1">
+                  ใช้ยืนยันตัวตนสำหรับสมาคม
+                </p>
+                <input
+                  type="file"
+                  id="reg-idphoto"
+                  accept="image/*"
+                  onchange="app.previewFileName(this, 'reg-idphoto-label')"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div
+                  id="reg-idphoto-label"
+                  class="mt-2 text-xs text-bonsai-600 font-semibold"
+                ></div>
+              </div>
+            </div>
+
+            <!-- 3. ความยินยอมข้อมูลส่วนบุคคล (PDPA) -->
+            <div class="mb-8 p-5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  id="reg-pdpa-consent"
+                  required
+                  class="mt-1 w-5 h-5 text-bonsai-600 rounded border-gray-300 focus:ring-bonsai-500 cursor-pointer flex-shrink-0"
+                />
+                <span class="text-sm text-gray-700 leading-relaxed">
+                  ข้าพเจ้ายินยอม ให้สมาคมบอนไซไทยเก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคล เพื่อใช้ในการจัดทำทะเบียนสมาชิก การออกบัตรสมาชิกดิจิทัล และการติดต่อเกี่ยวกับกิจกรรมของสมาคม ตามพ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) <span class="text-red-500 font-bold">*</span>
+                </span>
+              </label>
+            </div>
+
+            <div class="flex justify-end border-t pt-6">
+              <button
+                type="submit"
+                id="btn-submit-reg"
+                class="bg-bonsai-600 text-white px-8 py-3 rounded-lg font-bold shadow hover:bg-bonsai-700 flex items-center transition"
+              >
+                <i class="fa-solid fa-paper-plane mr-2"></i>
+                ยืนยันการสมัครสมาชิก
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- View: Members List -->
+      <div id="view-members" class="view-section hide">
+        <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+          <div
+            class="flex flex-col md:flex-row justify-between items-center mb-6"
+          >
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800">
+                <i class="fa-solid fa-users text-bonsai-600 mr-2"></i
+                >รายชื่อสมาชิกทั้งหมด
+              </h2>
+              <p class="text-sm text-gray-500">
+                ข้อมูลดึงตรงจากฐานข้อมูล Google Sheets
+              </p>
+            </div>
+            <button
+              onclick="app.fetchMembersFromApi()"
+              class="mt-2 md:mt-0 bg-bonsai-50 text-bonsai-700 px-4 py-2 rounded-lg font-semibold hover:bg-bonsai-100 transition flex items-center text-sm"
+            >
+              <i class="fa-solid fa-rotate mr-2"></i> รีเฟรชข้อมูล
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    เลขสมาชิก
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    ชื่อ - นามสกุล
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    จังหวัด
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  >
+                    สถานะ
+                  </th>
+                  <th
+                    class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+                  >
+                    บัตรสมาชิก
+                  </th>
+                </tr>
+              </thead>
+              <tbody
+                id="members-table-body"
+                class="bg-white divide-y divide-gray-200"
+              >
+                <tr>
+                  <td colspan="5" class="text-center py-8 text-gray-400">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                    <div>กำลังโหลดข้อมูลจาก Google Sheets...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: All Member Cards Gallery -->
+      <div id="view-all-cards" class="view-section hide">
+        <div class="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+          <div
+            class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b pb-5 mb-6"
+          >
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <i class="fa-solid fa-id-card text-emerald-600"></i> บัตรสมาชิกทั้งหมด
+              </h2>
+              <p class="text-sm text-gray-500 mt-0.5">
+                รวมบัตรสมาชิกประจำตัวดิจิทัลในระบบสมาคมบอนไซไทย (<span id="all-cards-count" class="font-bold text-emerald-700">0</span> ใบ)
+              </p>
+            </div>
+            <div class="flex items-center gap-2.5 w-full md:w-auto">
+              <div class="relative flex-grow md:w-72">
+                <input
+                  type="text"
+                  id="all-cards-search"
+                  oninput="app.renderAllCards()"
+                  placeholder="ค้นหาชื่อ, รหัส, จังหวัด..."
+                  class="w-full pl-9 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-xs"></i>
+              </div>
+              <button
+                onclick="app.fetchMembersFromApi()"
+                class="bg-emerald-50 text-emerald-700 px-3.5 py-2 rounded-xl text-sm font-semibold hover:bg-emerald-100 transition flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+              >
+                <i class="fa-solid fa-rotate"></i> รีเฟรช
+              </button>
+            </div>
+          </div>
+
+          <!-- Cards Grid Container -->
+          <div id="all-cards-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Dynamic Cards Injected Here -->
+          </div>
+
+          <!-- Empty State -->
+          <div id="all-cards-empty" class="hidden text-center py-16 text-gray-400">
+            <i class="fa-solid fa-address-card text-4xl mb-3 text-gray-300"></i>
+            <p class="text-base font-medium">ไม่พบบัตรสมาชิกที่ตรงกับเงื่อนไขการค้นหา</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: Payment -->
+      <div id="view-payment" class="view-section hide">
+        <div
+          class="max-w-2xl mx-auto bg-white rounded-2xl shadow-md p-6 sm:p-8"
+        >
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">
+            <i class="fa-solid fa-file-invoice-dollar text-yellow-500 mr-2"></i
+            >แจ้งชำระเงิน / สลิป
+          </h2>
+          <div
+            class="p-4 bg-amber-50 border border-amber-200 rounded-xl mb-6 text-sm text-amber-900"
+          >
+            <p class="font-bold mb-1">
+              <i class="fa-solid fa-building-columns mr-1"></i>
+              บัญชีธนาคารสำหรับโอนเงิน:
+            </p>
+            <p>ธนาคารกรุงเทพ</p>
+            <p>ชื่อบัญชี: <strong>สมาคมบอนไซไทย</strong></p>
+            <p>เลขที่บัญชี: <strong>235-0-84999-4</strong></p>
+          </div>
+
+          <form id="form-payment" onsubmit="app.handlePayment(event)">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >เลขสมาชิก หรือ เบอร์โทรศัพท์
+                  <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="text"
+                  id="pay-member-id"
+                  required
+                  placeholder="เช่น TBA-0001 หรือ 0812345678"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >จำนวนเงินที่โอน (บาท)
+                  <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="number"
+                  id="pay-amount"
+                  required
+                  min="1"
+                  placeholder="500"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1"
+                  >แนบหลักฐานสลิปการโอนเงิน
+                  <span class="text-red-500">*</span></label
+                >
+                <input
+                  type="file"
+                  id="pay-slip"
+                  required
+                  accept="image/*"
+                  class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-yellow-50 file:text-yellow-700 border p-1 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div class="mt-6">
+              <button
+                type="submit"
+                id="btn-submit-pay"
+                class="w-full bg-yellow-500 text-white px-4 py-3 rounded-lg font-bold shadow hover:bg-yellow-600 transition flex justify-center items-center"
+              >
+                <i class="fa-solid fa-upload mr-2"></i> ส่งข้อมูลแจ้งชำระเงิน
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- View: Member Detail Card -->
+      <div id="view-member-detail" class="view-section hide">
+        <div class="max-w-2xl mx-auto">
+          <!-- Action Bar -->
+          <div
+            class="mb-5 flex flex-wrap justify-between items-center gap-3 no-print"
+          >
+            <button
+              onclick="app.navigate('members')"
+              class="text-gray-600 hover:text-bonsai-700 font-medium text-sm flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-gray-100 transition"
+            >
+              <i class="fa-solid fa-arrow-left"></i> ย้อนกลับ
+            </button>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                onclick="document.getElementById('card-photo-input').click()"
+                class="bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-800 font-medium px-3.5 py-2 rounded-xl shadow-sm text-sm transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <i class="fa-solid fa-camera text-emerald-700"></i>
+                เปลี่ยนรูปสมาชิก
+              </button>
+              <button
+                id="btn-download-card"
+                onclick="app.downloadCard()"
+                class="bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-700 hover:to-green-700 text-white font-bold px-4 py-2 rounded-xl shadow-md hover:shadow-lg transition text-sm flex items-center gap-2 cursor-pointer"
+              >
+                <i class="fa-solid fa-download"></i> ดาวน์โหลดบัตร
+                (บันทึกลงมือถือ)
+              </button>
+              <button
+                onclick="window.print()"
+                class="bg-gray-800 text-white px-3.5 py-2 rounded-xl shadow text-sm hover:bg-gray-700 transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <i class="fa-solid fa-print"></i> พิมพ์
+              </button>
+            </div>
+          </div>
+
+          <!-- Member Card Container -->
+          <div class="flex justify-center">
+            <div
+              id="print-area"
+              class="relative w-full max-w-[600px] rounded-2xl overflow-hidden bg-white text-gray-800 select-none shadow-2xl border border-gray-200"
+            >
+              <!-- Top Green Header -->
+              <div
+                class="relative px-5 py-3.5 flex justify-between items-center text-white border-b border-emerald-800/40"
+                style="
+                  background-color: #136136;
+                  background-image: url(&quot;card-header-bg.png&quot;);
+                  background-repeat: repeat-x;
+                  background-size: auto 100%;
+                  background-position: center;
+                "
+              >
+                <div class="flex items-center gap-3">
+                  <!-- White Logo Circle -->
+                  <div
+                    class="w-12 h-12 bg-white rounded-full p-1 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0"
+                  >
+                    <img
+                      src="logo.png"
+                      alt="โลโก้สมาคมบอนไซไทย"
+                      class="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <h2
+                      class="text-lg sm:text-xl font-bold leading-tight tracking-wide text-white"
+                    >
+                      สมาคมบอนไซไทย
+                    </h2>
+                    <p
+                      class="text-[11px] sm:text-xs text-emerald-100/90 font-normal tracking-wide"
+                    >
+                      Thai Bonsai Association
+                    </p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span
+                    class="text-xs font-bold text-emerald-100 tracking-[0.2em] uppercase font-sans"
+                    >MEMBER CARD</span
+                  >
+                </div>
+              </div>
+
+              <!-- Card Body -->
+              <div class="relative p-5 sm:p-6 bg-white overflow-hidden">
+                <!-- Bonsai Tree Silhouette Watermark in Background -->
+                <div
+                  class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04] select-none"
+                >
+                  <img
+                    src="logo.png"
+                    alt="watermark"
+                    class="w-72 h-72 object-contain filter grayscale"
+                  />
+                </div>
+
+                <div
+                  class="relative z-10 flex flex-row gap-5 sm:gap-6 items-start"
+                >
+                  <!-- Left Column: Member Photo Frame -->
+                  <div class="flex-shrink-0 flex flex-col items-center">
+                    <div
+                      class="relative w-32 h-40 sm:w-36 sm:h-44 rounded-xl overflow-hidden bg-slate-100 border border-gray-200 shadow-sm flex items-center justify-center group"
+                    >
+                      <img
+                        id="card-photo"
+                        referrerpolicy="no-referrer"
+                        src=""
+                        alt="รูปสมาชิก"
+                        class="w-full h-full object-cover"
+                      />
+
+                      <!-- ปุ่มไอคอนกล้องบนรูป (ซ่อนตอนดาวน์โหลดบัตร) -->
+                      <button
+                        type="button"
+                        onclick="
+                          document.getElementById('card-photo-input').click()
+                        "
+                        data-html2canvas-ignore="true"
+                        title="คลิกเพื่อเลือกรูปใหม่"
+                        class="absolute bottom-2 right-2 bg-gray-900/70 hover:bg-black text-white p-2 rounded-full shadow backdrop-blur-sm transition transform hover:scale-110 flex items-center justify-center cursor-pointer"
+                      >
+                        <i class="fa-solid fa-camera text-xs"></i>
+                      </button>
+                    </div>
+
+                    <!-- ปุ่มเปลี่ยนรูปและแผงควบคุม (ซ่อนตอนดาวน์โหลดบัตร) -->
+                    <div
+                      data-html2canvas-ignore="true"
+                      class="mt-2.5 flex flex-col items-center gap-1.5 w-full"
+                    >
+                      <input
+                        type="file"
+                        id="card-photo-input"
+                        accept="image/*"
+                        class="hidden"
+                        onchange="app.onCardPhotoSelected(event)"
+                      />
+
+                      <button
+                        type="button"
+                        id="btn-change-photo-trigger"
+                        onclick="
+                          document.getElementById('card-photo-input').click()
+                        "
+                        class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                      >
+                        <i class="fa-solid fa-camera text-[10px]"></i>
+                        เปลี่ยนรูป
+                      </button>
+
+                      <div
+                        id="card-photo-actions"
+                        class="hidden flex flex-col items-center gap-1 w-full animate-pulse"
+                      >
+                        <span
+                          class="text-[10px] text-amber-700 font-semibold flex items-center gap-1"
+                        >
+                          <i class="fa-solid fa-circle-info"></i> รูปใหม่
+                          (รอการบันทึก)
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            id="btn-save-photo"
+                            onclick="app.saveCardPhoto()"
+                            class="text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1 rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+                            บันทึก
+                          </button>
+                          <button
+                            type="button"
+                            onclick="app.cancelCardPhotoChange()"
+                            class="text-[11px] bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded-lg border border-gray-300 transition flex items-center gap-1 cursor-pointer"
+                          >
+                            <i class="fa-solid fa-xmark text-[10px]"></i> ยกเลิก
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right Column: Member Info Details -->
+                  <div
+                    class="flex-grow flex flex-col justify-between self-stretch text-left"
+                  >
+                    <div class="space-y-3 sm:space-y-3.5">
+                      <!-- ชื่อ-นามสกุล / NAME -->
+                      <div>
+                        <div
+                          class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                        >
+                          ชื่อ-นามสกุล / NAME
+                        </div>
+                        <div
+                          id="card-name"
+                          class="text-xl sm:text-2xl font-black text-gray-900 leading-snug mt-0.5"
+                        >
+                          -
+                        </div>
+                      </div>
+
+                      <!-- 2-Column Grid: ID & Province -->
+                      <div class="grid grid-cols-2 gap-3 sm:gap-4 pt-0.5">
+                        <div>
+                          <div
+                            class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                          >
+                            เลขสมาชิก / ID
+                          </div>
+                          <div
+                            id="card-id"
+                            class="text-base sm:text-lg font-black font-mono text-[#0e522c] tracking-wider mt-0.5"
+                          >
+                            -
+                          </div>
+                        </div>
+                        <div>
+                          <div
+                            class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                          >
+                            จังหวัด / PROVINCE
+                          </div>
+                          <div
+                            id="card-province"
+                            class="text-sm sm:text-base font-bold text-gray-800 mt-0.5"
+                          >
+                            -
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 2-Column Grid: Issued & Expiry -->
+                      <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <div
+                            class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                          >
+                            วันที่สมัคร / ISSUED
+                          </div>
+                          <div
+                            id="card-join-date"
+                            class="text-xs sm:text-sm font-bold text-gray-800 mt-0.5"
+                          >
+                            -
+                          </div>
+                        </div>
+                        <div>
+                          <div
+                            class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                          >
+                            วันหมดอายุ / EXPIRY
+                          </div>
+                          <div
+                            id="card-expire-date"
+                            class="text-xs sm:text-sm font-bold text-red-600 mt-0.5"
+                          >
+                            -
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- 2-Column Grid: Phone & Status -->
+                      <div
+                        class="grid grid-cols-2 gap-3 sm:gap-4 items-center pt-0.5"
+                      >
+                        <div>
+                          <div
+                            class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                          >
+                            เบอร์โทรศัพท์ / PHONE
+                          </div>
+                          <div
+                            id="card-phone"
+                            class="text-xs sm:text-sm font-bold text-gray-700 mt-0.5"
+                          >
+                            -
+                          </div>
+                        </div>
+                        <div>
+                          <div
+                            class="text-[11px] font-medium text-gray-500 uppercase tracking-wide"
+                          >
+                            สถานะ / STATUS
+                          </div>
+                          <div id="card-status-badge" class="mt-1"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Bottom Footer Bar -->
+              <div
+                class="bg-[#0e4d29] py-2 px-4 text-center border-t border-emerald-900/30"
+              >
+                <p
+                  class="text-[10px] sm:text-[11.5px] text-white/95 font-medium tracking-wide"
+                >
+                  บัตรนี้เป็นกรรมสิทธิ์ของสมาคมบอนไซไทย
+                  หากเก็บได้กรุณาส่งคืนสมาคม
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: Admin Dashboard -->
+      <div id="view-admin" class="view-section hide">
+        <div class="mb-6 flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800">
+              <i class="fa-solid fa-shield-halved text-gray-700 mr-2"></i
+              >ผู้ดูแลระบบ (Admin)
+            </h2>
+            <p class="text-sm text-gray-500">
+              ตรวจสอบสลิปและอนุมัติสถานะสมาชิก
+            </p>
+          </div>
+          <button
+            onclick="app.fetchMembersFromApi()"
+            class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700"
+          >
+            <i class="fa-solid fa-rotate mr-1"></i> โหลดข้อมูลใหม่
+          </button>
+        </div>
+        <div class="bg-white rounded-xl shadow overflow-hidden border">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                >
+                  รหัสสมาชิก
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                >
+                  ชื่อ - นามสกุล
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                >
+                  รูปถ่าย / สลิป
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                >
+                  สถานะ
+                </th>
+                <th
+                  class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+                >
+                  จัดการ
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              id="admin-table-body"
+              class="divide-y divide-gray-100 bg-white"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- View: Status Check -->
+      <div id="view-status" class="view-section hide">
+        <div class="max-w-xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow">
+          <h2 class="text-2xl font-bold text-center mb-2">
+            <i class="fa-solid fa-magnifying-glass text-blue-500 mr-2"></i
+            >ตรวจสอบสถานะสมาชิก
+          </h2>
+          <p class="text-center text-sm text-gray-500 mb-6">
+            กรอกเลขประจำตัวสมาชิก หรือ เบอร์โทรศัพท์ที่ใช้ลงทะเบียน
+          </p>
+          <div class="flex gap-2 mb-4">
+            <input
+              type="text"
+              id="status-query"
+              placeholder="เช่น TBA-0001 หรือ 0812345678"
+              class="flex-grow px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <button
+              onclick="app.checkStatus()"
+              class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition"
+            >
+              ค้นหา
+            </button>
+          </div>
+          <div id="status-result" class="mt-6"></div>
+        </div>
+      </div>
     </main>
 
+    <!-- Admin Login Modal -->
+    <div
+      id="modal-login"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hide"
+    >
+      <div
+        class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100 transform transition-all"
+      >
+        <div
+          class="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-6 py-4 flex justify-between items-center"
+        >
+          <div class="flex items-center gap-2">
+            <div
+              class="w-8 h-8 rounded-full bg-bonsai-600/30 flex items-center justify-center text-emerald-400"
+            >
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-base">เข้าสู่ระบบผู้ดูแล</h3>
+              <p class="text-[11px] text-gray-300">Thai Bonsai Admin Portal</p>
+            </div>
+          </div>
+          <button
+            onclick="app.closeLoginModal()"
+            class="text-gray-400 hover:text-white text-lg"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <form id="form-login" onsubmit="app.handleLogin(event)" class="p-6">
+          <div
+            id="login-error"
+            class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs flex items-center gap-2"
+          >
+            <i class="fa-solid fa-circle-exclamation text-rose-500 text-sm"></i>
+            <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1"
+                >ชื่อผู้ใช้งาน (Username)</label
+              >
+              <div class="relative">
+                <i
+                  class="fa-solid fa-user absolute left-3 top-3 text-gray-400 text-sm"
+                ></i>
+                <input
+                  type="text"
+                  id="login-username"
+                  required
+                  placeholder="admin"
+                  autocomplete="username"
+                  class="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1"
+                >รหัสผ่าน (Password)</label
+              >
+              <div class="relative">
+                <i
+                  class="fa-solid fa-key absolute left-3 top-3 text-gray-400 text-sm"
+                ></i>
+                <input
+                  type="password"
+                  id="login-password"
+                  required
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  class="w-full pl-9 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-bonsai-500 outline-none text-sm"
+                />
+                <button
+                  type="button"
+                  onclick="app.togglePasswordVisibility('login-password', this)"
+                  class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-sm"
+                >
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900"
+          >
+            <div class="font-semibold mb-0.5">
+              <i class="fa-solid fa-user-shield mr-1 text-emerald-700"></i>
+              บัญชีผู้ดูแลระบบ (Admin User):
+            </div>
+            <div class="font-mono text-[11px] text-gray-700 mt-1">
+              Username: <strong>admin</strong> | Password:
+              <strong>admin1234</strong>
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-2 justify-end">
+            <button
+              type="button"
+              onclick="app.closeLoginModal()"
+              class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              class="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-700 transition shadow flex items-center gap-1.5"
+            >
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> เข้าสู่ระบบ
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+    <div
+      id="toast-container"
+      class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"
+    ></div>
 
     <script>
-        // 🌟 Web App URL ที่เชื่อมต่อกับ Google Apps Script ของคุณ
-        let GOOGLE_SCRIPT_URL = localStorage.getItem("BONSAI_API_URL") || "https://script.google.com/macros/s/AKfycbyNwpMFNf2Anl_y5uo_Tv-zA3la5bxziW79Cmw2e1goG5g1yn__81bFZQK9wKBzqL-HFQ/exec";
+      // 🌟 Web App URL ที่เชื่อมต่อกับ Google Apps Script ของคุณ
+      let GOOGLE_SCRIPT_URL =
+        localStorage.getItem("BONSAI_API_URL") ||
+        "https://script.google.com/macros/s/AKfycbyNwpMFNf2Anl_y5uo_Tv-zA3la5bxziW79Cmw2e1goG5g1yn__81bFZQK9wKBzqL-HFQ/exec";
 
-        const provinces = ["กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร", "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา", "ชลบุรี", "ชัยนาท", "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด", "ตาก", "นครนายก", "นครปฐม", "นครพนม", "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส", "น่าน", "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์", "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา", "พะเยา", "พังงา", "พัทลุง", "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์", "แพร่", "ภูเก็ต", "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน", "ยโสธร", "ยะลา", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี", "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ", "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ", "สมุทรสงคราม", "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี", "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี", "สุรินทร์", "หนองคาย", "หนองบัวลำภู", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์", "อุทัยธานี", "อุบลราชธานี"];
+      // 🔐 บัญชีแอดมินสำหรับเข้าสู่ระบบ (กำหนดสิทธิ์ Admin)
+      const ADMIN_CREDENTIALS = {
+        username: "admin",
+        password: "admin1234",
+      };
 
-        const app = {
-            members: [],
+      const provinces = [
+        "กรุงเทพมหานคร",
+        "กระบี่",
+        "กาญจนบุรี",
+        "กาฬสินธุ์",
+        "กำแพงเพชร",
+        "ขอนแก่น",
+        "จันทบุรี",
+        "ฉะเชิงเทรา",
+        "ชลบุรี",
+        "ชัยนาท",
+        "ชัยภูมิ",
+        "ชุมพร",
+        "เชียงราย",
+        "เชียงใหม่",
+        "ตรัง",
+        "ตราด",
+        "ตาก",
+        "นครนายก",
+        "นครปฐม",
+        "นครพนม",
+        "นครราชสีมา",
+        "นครศรีธรรมราช",
+        "นครสวรรค์",
+        "นนทบุรี",
+        "นราธิวาส",
+        "น่าน",
+        "บึงกาฬ",
+        "บุรีรัมย์",
+        "ปทุมธานี",
+        "ประจวบคีรีขันธ์",
+        "ปราจีนบุรี",
+        "ปัตตานี",
+        "พระนครศรีอยุธยา",
+        "พะเยา",
+        "พังงา",
+        "พัทลุง",
+        "พิจิตร",
+        "พิษณุโลก",
+        "เพชรบุรี",
+        "เพชรบูรณ์",
+        "แพร่",
+        "ภูเก็ต",
+        "มหาสารคาม",
+        "มุกดาหาร",
+        "แม่ฮ่องสอน",
+        "ยโสธร",
+        "ยะลา",
+        "ร้อยเอ็ด",
+        "ระนอง",
+        "ระยอง",
+        "ราชบุรี",
+        "ลพบุรี",
+        "ลำปาง",
+        "ลำพูน",
+        "เลย",
+        "ศรีสะเกษ",
+        "สกลนคร",
+        "สงขลา",
+        "สตูล",
+        "สมุทรปราการ",
+        "สมุทรสงคราม",
+        "สมุทรสาคร",
+        "สระแก้ว",
+        "สระบุรี",
+        "สิงห์บุรี",
+        "สุโขทัย",
+        "สุพรรณบุรี",
+        "สุราษฎร์ธานี",
+        "สุรินทร์",
+        "หนองคาย",
+        "หนองบัวลำภู",
+        "อ่างทอง",
+        "อำนาจเจริญ",
+        "อุดรธานี",
+        "อุตรดิตถ์",
+        "อุทัยธานี",
+        "อุบลราชธานี",
+      ];
 
-            init: function() {
-                const provSelect = document.getElementById('reg-province');
-                provinces.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p; opt.textContent = p;
-                    provSelect.appendChild(opt);
-                });
+      const app = {
+        members: [],
 
-                this.fetchMembersFromApi();
-                this.navigate('home');
-            },
+        init: function () {
+          const provSelect = document.getElementById("reg-province");
+          provinces.forEach((p) => {
+            const opt = document.createElement("option");
+            opt.value = p;
+            opt.textContent = p;
+            provSelect.appendChild(opt);
+          });
 
-            promptApiUrl: function() {
-                const url = prompt("กำหนด Google Apps Script Web App URL:", GOOGLE_SCRIPT_URL);
-                if (url) {
-                    GOOGLE_SCRIPT_URL = url.trim();
-                    localStorage.setItem("BONSAI_API_URL", GOOGLE_SCRIPT_URL);
-                    this.showToast("บันทึกการตั้งค่า URL เรียบร้อยแล้ว", "success");
-                    this.fetchMembersFromApi();
+          this.updateAuthUI();
+          this.fetchMembersFromApi();
+          this.navigate("home");
+        },
+
+        // ตรวจสอบสถานะการล็อกอินของแอดมิน
+        isAdminLoggedIn: function () {
+          return sessionStorage.getItem("BONSAI_ADMIN_LOGGED_IN") === "true";
+        },
+
+        // อัปเดตการแสดงผลตามสิทธิ์ (Admin vs User ทั่วไป)
+        updateAuthUI: function () {
+          const isAdmin = this.isAdminLoggedIn();
+
+          // แสดง/ซ่อน เมนูและปุ่มเฉพาะแอดมิน (ปุ่ม Admin, ปุ่มออกจากระบบ, ปุ่มเปลี่ยน API URL)
+          document.querySelectorAll(".admin-only").forEach((el) => {
+            if (isAdmin) {
+              el.classList.remove("hide");
+            } else {
+              el.classList.add("hide");
+            }
+          });
+
+          // แสดง/ซ่อน ปุ่มเข้าสู่ระบบสำหรับ Guest
+          document.querySelectorAll(".guest-only").forEach((el) => {
+            if (isAdmin) {
+              el.classList.add("hide");
+            } else {
+              el.classList.remove("hide");
+            }
+          });
+        },
+
+        openLoginModal: function () {
+          const modal = document.getElementById("modal-login");
+          const err = document.getElementById("login-error");
+          if (err) err.classList.add("hidden");
+          document.getElementById("form-login").reset();
+          if (modal) modal.classList.remove("hide");
+          setTimeout(() => {
+            const userInput = document.getElementById("login-username");
+            if (userInput) userInput.focus();
+          }, 100);
+        },
+
+        closeLoginModal: function () {
+          const modal = document.getElementById("modal-login");
+          if (modal) modal.classList.add("hide");
+        },
+
+        togglePasswordVisibility: function (inputId, btn) {
+          const input = document.getElementById(inputId);
+          const icon = btn.querySelector("i");
+          if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+          } else {
+            input.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+          }
+        },
+
+        handleLogin: function (e) {
+          e.preventDefault();
+          const u = document.getElementById("login-username").value.trim();
+          const p = document.getElementById("login-password").value.trim();
+          const errBox = document.getElementById("login-error");
+
+          if (
+            u === ADMIN_CREDENTIALS.username &&
+            p === ADMIN_CREDENTIALS.password
+          ) {
+            sessionStorage.setItem("BONSAI_ADMIN_LOGGED_IN", "true");
+            this.closeLoginModal();
+            this.updateAuthUI();
+            this.showToast("เข้าสู่ระบบผู้ดูแลเรียบร้อยแล้ว", "success");
+            this.navigate("admin");
+          } else {
+            if (errBox) {
+              errBox.classList.remove("hidden");
+              document.getElementById("login-error-text").textContent =
+                "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
+            }
+          }
+        },
+
+        logout: function () {
+          sessionStorage.removeItem("BONSAI_ADMIN_LOGGED_IN");
+          this.updateAuthUI();
+          this.showToast("ออกจากระบบเรียบร้อยแล้ว", "success");
+          this.navigate("home");
+        },
+
+        promptApiUrl: function () {
+          if (!this.isAdminLoggedIn()) {
+            this.openLoginModal();
+            return;
+          }
+          const url = prompt(
+            "กำหนด Google Apps Script Web App URL:",
+            GOOGLE_SCRIPT_URL,
+          );
+          if (url) {
+            GOOGLE_SCRIPT_URL = url.trim();
+            localStorage.setItem("BONSAI_API_URL", GOOGLE_SCRIPT_URL);
+            this.showToast("บันทึกการตั้งค่า URL เรียบร้อยแล้ว", "success");
+            this.fetchMembersFromApi();
+          }
+        },
+
+        navigate: function (viewId) {
+          // ป้องกันไม่ให้ User ทั่วไปเข้าถึงหน้า Admin ได้หากยังไม่ล็อกอิน
+          if (viewId === "admin" && !this.isAdminLoggedIn()) {
+            this.openLoginModal();
+            return;
+          }
+
+          document
+            .querySelectorAll(".view-section")
+            .forEach((el) => el.classList.add("hide"));
+          document
+            .querySelectorAll(".nav-btn")
+            .forEach((el) => el.classList.remove("active"));
+
+          const targetView = document.getElementById(`view-${viewId}`);
+          if (targetView) targetView.classList.remove("hide");
+
+          const targetBtn = document.querySelector(`.nav-${viewId}`);
+          if (targetBtn) targetBtn.classList.add("active");
+
+          if (viewId === "members") this.renderMembersTable();
+          if (viewId === "admin") this.renderAdminDashboard();
+          if (viewId === "all-cards") this.renderAllCards();
+          this.updateStats();
+          window.scrollTo(0, 0);
+        },
+
+        showToast: function (message, type = "success") {
+          const container = document.getElementById("toast-container");
+          const toast = document.createElement("div");
+          const bgClass =
+            type === "success"
+              ? "bg-emerald-600"
+              : type === "info"
+                ? "bg-blue-600"
+                : "bg-rose-600";
+          const iconClass =
+            type === "success"
+              ? "fa-check-circle"
+              : type === "info"
+                ? "fa-circle-info"
+                : "fa-triangle-exclamation";
+          toast.className = `${bgClass} text-white px-6 py-3 rounded-lg shadow-xl font-medium flex items-center gap-2 transition-all duration-300`;
+          toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> ${message}`;
+          container.appendChild(toast);
+          setTimeout(() => toast.remove(), 4000);
+        },
+
+        previewFileName: function (input, targetId) {
+          const target = document.getElementById(targetId);
+          if (input.files && input.files[0]) {
+            target.textContent = "✓ เลือกไฟล์แล้ว: " + input.files[0].name;
+          }
+        },
+
+        fileToBase64: function (file) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (error) => reject(error);
+          });
+        },
+
+        // MediaPipe Face Detection Helper
+        initFaceDetector: function () {
+          if (this._faceDetector) return this._faceDetector;
+          if (typeof FaceDetection === "undefined") return null;
+          try {
+            this._faceDetector = new FaceDetection({
+              locateFile: (file) =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/${file}`,
+            });
+            this._faceDetector.setOptions({
+              model: "short",
+              minDetectionConfidence: 0.5,
+            });
+            return this._faceDetector;
+          } catch (e) {
+            console.warn("MediaPipe initialization error:", e);
+            return null;
+          }
+        },
+
+        cropFaceWithMediaPipe: async function (fileOrBase64) {
+          return new Promise(async (resolve) => {
+            try {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+
+              if (typeof fileOrBase64 === "string") {
+                img.src = fileOrBase64;
+              } else {
+                img.src = await this.fileToBase64(fileOrBase64);
+              }
+
+              await new Promise((res, rej) => {
+                if (img.complete) return res();
+                img.onload = () => res();
+                img.onerror = () => rej(new Error("โหลดรูปภาพไม่สำเร็จ"));
+              });
+
+              const detector = this.initFaceDetector();
+              if (!detector) {
+                console.warn("Face detector not ready, fallback to original");
+                return resolve({ base64: img.src, detected: false });
+              }
+
+              let resolved = false;
+              const timer = setTimeout(() => {
+                if (!resolved) {
+                  resolved = true;
+                  console.warn(
+                    "MediaPipe detection timed out, fallback to original",
+                  );
+                  resolve({ base64: img.src, detected: false });
                 }
-            },
+              }, 5000);
 
-            navigate: function(viewId) {
-                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hide'));
-                document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-                
-                const targetView = document.getElementById(`view-${viewId}`);
-                if (targetView) targetView.classList.remove('hide');
+              detector.onResults((results) => {
+                if (resolved) return;
+                resolved = true;
+                clearTimeout(timer);
 
-                const targetBtn = document.querySelector(`.nav-${viewId}`);
-                if (targetBtn) targetBtn.classList.add('active');
-
-                if (viewId === 'members') this.renderMembersTable();
-                if (viewId === 'admin') this.renderAdminDashboard();
-                window.scrollTo(0, 0);
-            },
-
-            showToast: function(message, type = 'success') {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = `${type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'} text-white px-6 py-3 rounded-lg shadow-xl font-medium flex items-center gap-2`;
-                toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-triangle-exclamation'}"></i> ${message}`;
-                container.appendChild(toast);
-                setTimeout(() => toast.remove(), 4000);
-            },
-
-            previewFileName: function(input, targetId) {
-                const target = document.getElementById(targetId);
-                if (input.files && input.files[0]) {
-                    target.textContent = '✓ เลือกไฟล์แล้ว: ' + input.files[0].name;
+                if (
+                  !results ||
+                  !results.detections ||
+                  results.detections.length === 0
+                ) {
+                  console.log(
+                    "No face detected by MediaPipe, keeping original",
+                  );
+                  return resolve({ base64: img.src, detected: false });
                 }
-            },
 
-            fileToBase64: function(file) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(file);
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = error => reject(error);
-                });
-            },
+                const box = results.detections[0].boundingBox;
+                const iw = img.naturalWidth || img.width;
+                const ih = img.naturalHeight || img.height;
 
-            fetchMembersFromApi: async function() {
-                if (!GOOGLE_SCRIPT_URL) return;
-                try {
-                    const res = await fetch(GOOGLE_SCRIPT_URL);
-                    const data = await res.json();
-                    if (Array.isArray(data)) {
-                        this.members = data;
-                        this.renderMembersTable();
+                const fx = box.xCenter * iw;
+                const fy = box.yCenter * ih;
+                const fw = box.width * iw;
+                const fh = box.height * ih;
+
+                // คำนวณกรอบสัดส่วน 3:4 ให้มุมมองกว้างขึ้น ใบหน้าอยู่กึ่งกลาง มีระยะห่างจากขอบรอบด้านพอดี
+                let cropH = fh * 3.0;
+                let cropW = cropH * (3 / 4);
+
+                if (cropW > iw) {
+                  cropW = iw;
+                  cropH = cropW * (4 / 3);
+                }
+                if (cropH > ih) {
+                  cropH = ih;
+                  cropW = cropH * (3 / 4);
+                }
+
+                let cropX = fx - cropW / 2;
+                let cropY = fy - cropH * 0.44; // จัดระยะเหนือศีรษะให้มีพื้นที่ว่าง ไม่ชิดขอบบน
+
+                if (cropX < 0) cropX = 0;
+                if (cropY < 0) cropY = 0;
+                if (cropX + cropW > iw) cropX = iw - cropW;
+                if (cropY + cropH > ih) cropY = ih - cropH;
+
+                const canvas = document.createElement("canvas");
+                canvas.width = 450;
+                canvas.height = 600;
+                const ctx = canvas.getContext("2d");
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "high";
+
+                ctx.drawImage(
+                  img,
+                  cropX,
+                  cropY,
+                  cropW,
+                  cropH,
+                  0,
+                  0,
+                  canvas.width,
+                  canvas.height,
+                );
+                const croppedBase64 = canvas.toDataURL("image/jpeg", 0.92);
+                resolve({ base64: croppedBase64, detected: true });
+              });
+
+              await detector.send({ image: img });
+            } catch (err) {
+              console.error("MediaPipe crop error:", err);
+              const fallback =
+                typeof fileOrBase64 === "string"
+                  ? fileOrBase64
+                  : await this.fileToBase64(fileOrBase64).catch(() => "");
+              resolve({ base64: fallback, detected: false });
+            }
+          });
+        },
+
+        onRegPhotoSelected: async function (input) {
+          const file = input.files && input.files[0];
+          if (!file) return;
+
+          if (!file.type.startsWith("image/")) {
+            this.showToast("กรุณาเลือกไฟล์รูปภาพเท่านั้น", "error");
+            input.value = "";
+            return;
+          }
+
+          const previewBox = document.getElementById("reg-photo-preview-box");
+          const label = document.getElementById("reg-photo-label");
+
+          if (previewBox) {
+            previewBox.innerHTML = `
+                        <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-600 mb-2"></i>
+                        <p class="text-sm font-medium text-emerald-800">กำลังตรวจจับใบหน้าและครอบรูป...</p>
+                        <p class="text-xs text-emerald-600 mt-1">ใช้ AI MediaPipe Face Detection</p>
+                    `;
+          }
+
+          try {
+            const result = await this.cropFaceWithMediaPipe(file);
+            this.croppedRegPhotoBase64 = result.base64;
+
+            if (previewBox) {
+              previewBox.innerHTML = `
+                            <div class="relative inline-block mb-2">
+                                <img src="${result.base64}" alt="รูปหน้าตรงที่ครอบแล้ว" class="w-24 h-32 object-cover rounded-lg border-2 border-emerald-500 shadow-md">
+                                <span class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full shadow whitespace-nowrap">
+                                    ${result.detected ? "✓ AI ครอปใบหน้า" : "รูปต้นฉบับ"}
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 font-medium mt-1">คลิกเพื่อเลือกรูปใหม่</p>
+                        `;
+            }
+            if (label) {
+              label.textContent =
+                "✓ " + file.name + (result.detected ? " (ครอบใบหน้าแล้ว)" : "");
+            }
+            if (result.detected) {
+              this.showToast(
+                "AI MediaPipe ครอบเฉพาะใบหน้าเรียบร้อยแล้ว!",
+                "success",
+              );
+            } else {
+              this.showToast("เลือกรูปภาพเรียบร้อยแล้ว", "success");
+            }
+          } catch (err) {
+            console.error("Photo crop error:", err);
+            const fallback = await this.fileToBase64(file).catch(() => "");
+            this.croppedRegPhotoBase64 = fallback;
+            if (label) label.textContent = "✓ " + file.name;
+            this.showToast("เลือกรูปภาพเรียบร้อยแล้ว", "success");
+          }
+        },
+
+        fetchMembersFromApi: async function () {
+          if (!GOOGLE_SCRIPT_URL) return;
+          try {
+            const res = await fetch(GOOGLE_SCRIPT_URL);
+            const data = await res.json();
+            if (Array.isArray(data)) {
+              // กรองแถวที่ว่างและตัดข้อมูลที่ซ้ำกัน (Deduplication)
+              const uniqueMap = new Map();
+              data.forEach((m) => {
+                if (!m || !m.id || String(m.id).trim() === "") return;
+                const idKey = String(m.id).trim();
+                if (!uniqueMap.has(idKey)) {
+                  uniqueMap.set(idKey, { ...m, id: idKey });
+                } else {
+                  // หากพบรหัสซ้ำ ให้รวมข้อมูลโดยเลือกฟิลด์ที่มีค่า และคงสถานะที่อนุมัติแล้วไว้
+                  const existing = uniqueMap.get(idKey);
+                  const merged = { ...existing };
+                  Object.keys(m).forEach((k) => {
+                    if (m[k] && (!existing[k] || existing[k] === "")) {
+                      merged[k] = m[k];
                     }
-                } catch (e) {
-                    console.error("Fetch Error:", e);
+                  });
+                  if (m.status === "active" || m.status === "อนุมัติแล้ว") {
+                    merged.status = m.status;
+                  }
+                  uniqueMap.set(idKey, merged);
                 }
-            },
+              });
+              this.members = Array.from(uniqueMap.values());
+              this.renderMembersTable();
+              this.updateStats();
+              const allCardsView = document.getElementById("view-all-cards");
+              if (allCardsView && !allCardsView.classList.contains("hide")) {
+                this.renderAllCards();
+              }
+              const adminView = document.getElementById("view-admin");
+              if (adminView && !adminView.classList.contains("hide")) {
+                this.renderAdminDashboard();
+              }
+            }
+          } catch (e) {
+            console.error("Fetch Error:", e);
+          }
+        },
 
-            handleRegister: async function(e) {
-                e.preventDefault();
-                const btn = document.getElementById('btn-submit-reg');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังอัปโหลดรูปและบันทึกข้อมูล...';
-
-                try {
-                    const photoFile = document.getElementById('reg-photo').files[0];
-                    const idPhotoFile = document.getElementById('reg-idphoto').files[0];
-
-                    const photoBase64 = photoFile ? await this.fileToBase64(photoFile) : "";
-                    const idPhotoBase64 = idPhotoFile ? await this.fileToBase64(idPhotoFile) : "";
-
-                    const payload = {
-                        action: "register",
-                        id: 'TBA-' + Math.floor(100000 + Math.random() * 900000),
-                        firstName: document.getElementById('reg-firstname').value,
-                        lastName: document.getElementById('reg-lastname').value,
-                        nickname: document.getElementById('reg-nickname').value,
-                        idCard: document.getElementById('reg-idcard').value,
-                        phone: document.getElementById('reg-phone').value,
-                        province: document.getElementById('reg-province').value,
-                        photoBase64: photoBase64,
-                        idPhotoBase64: idPhotoBase64
-                    };
-
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    });
-
-                    const resData = await response.json();
-
-                    if (resData.status === "success") {
-                        this.showToast("ลงทะเบียนและบันทึกเข้า Google Sheets เรียบร้อย!");
-                        document.getElementById('form-register').reset();
-                        document.getElementById('reg-photo-label').textContent = '';
-                        document.getElementById('reg-idphoto-label').textContent = '';
-                        await this.fetchMembersFromApi();
-                        this.navigate('members');
-                    } else {
-                        throw new Error(resData.message);
-                    }
-                } catch (err) {
-                    this.showToast("เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message, "error");
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> ยืนยันการสมัครสมาชิก';
+        getNextMemberId: function () {
+          let maxNum = 0;
+          if (Array.isArray(this.members)) {
+            this.members.forEach((m) => {
+              if (!m || !m.id) return;
+              const match = String(m.id)
+                .trim()
+                .match(/^TBA-(\d+)$/i);
+              if (match) {
+                const numStr = match[1];
+                // ข้ามเลขสุ่ม 6 หลักเดิมเพื่อเริ่มรันเลข 4 หลักจาก TBA-0001
+                if (numStr.length <= 4 || parseInt(numStr, 10) < 10000) {
+                  const num = parseInt(numStr, 10);
+                  if (num > maxNum) maxNum = num;
                 }
-            },
+              }
+            });
+          }
+          const nextNum = maxNum + 1;
+          return "TBA-" + String(nextNum).padStart(4, "0");
+        },
 
-            handlePayment: async function(e) {
-                e.preventDefault();
-                const btn = document.getElementById('btn-submit-pay');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังอัปโหลดสลิป...';
+        handleRegister: async function (e) {
+          e.preventDefault();
+          const btn = document.getElementById("btn-submit-reg");
+          btn.disabled = true;
+          btn.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังอัปโหลดรูปและบันทึกข้อมูล...';
 
-                try {
-                    const slipFile = document.getElementById('pay-slip').files[0];
-                    const slipBase64 = slipFile ? await this.fileToBase64(slipFile) : "";
+          try {
+            const pdpaConsent = document.getElementById("reg-pdpa-consent");
+            if (!pdpaConsent || !pdpaConsent.checked) {
+              this.showToast("กรุณากดยินยอมเงื่อนไข PDPA ก่อนยืนยันการสมัคร", "error");
+              btn.disabled = false;
+              btn.innerHTML =
+                '<i class="fa-solid fa-paper-plane mr-2"></i> ยืนยันการสมัครสมาชิก';
+              return;
+            }
 
-                    const payload = {
-                        action: "payment",
-                        memberId: document.getElementById('pay-member-id').value,
-                        amount: document.getElementById('pay-amount').value,
-                        slipBase64: slipBase64
-                    };
+            const photoFile = document.getElementById("reg-photo").files[0];
+            const idPhotoFile = document.getElementById("reg-idphoto").files[0];
 
-                    const response = await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    });
+            const photoBase64 =
+              this.croppedRegPhotoBase64 ||
+              (photoFile ? await this.fileToBase64(photoFile) : "");
+            const idPhotoBase64 = idPhotoFile
+              ? await this.fileToBase64(idPhotoFile)
+              : "";
 
-                    const resData = await response.json();
+            const generatedId = this.getNextMemberId();
+            const payload = {
+              action: "register",
+              id: generatedId,
+              firstName: document.getElementById("reg-firstname").value,
+              lastName: document.getElementById("reg-lastname").value,
+              nickname: document.getElementById("reg-nickname").value,
+              idCard: document.getElementById("reg-idcard").value,
+              phone: document.getElementById("reg-phone").value,
+              province: document.getElementById("reg-province").value,
+              issueDate: document.getElementById("reg-issue-date").value,
+              expireDate: document.getElementById("reg-expire-date").value,
+              pdpaConsent: "ยินยอม",
+              pdpaConsentDate: new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" }),
+              photoBase64: photoBase64,
+              idPhotoBase64: idPhotoBase64,
+            };
 
-                    if (resData.status === "success") {
-                        this.showToast("แจ้งชำระเงินเรียบร้อยแล้ว แอดมินจะทำการตรวจสอบสลิป");
-                        document.getElementById('form-payment').reset();
-                        await this.fetchMembersFromApi();
-                        this.navigate('status');
-                    } else {
-                        throw new Error(resData.message);
-                    }
-                } catch (err) {
-                    this.showToast("เกิดข้อผิดพลาดในการส่งข้อมูล", "error");
-                } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fa-solid fa-upload mr-2"></i> ส่งข้อมูลแจ้งชำระเงิน';
-                }
-            },
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
 
-            renderMembersTable: function() {
-                const tbody = document.getElementById('members-table-body');
-                tbody.innerHTML = '';
-                if (this.members.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-gray-500">ยังไม่มีข้อมูลสมาชิกในระบบ</td></tr>';
-                    return;
-                }
-                this.members.forEach(m => {
-                    const tr = document.createElement('tr');
-                    const isActive = m.status === 'active' || m.status === 'อนุมัติแล้ว';
-                    tr.innerHTML = `
+            const resData = await response.json();
+
+            if (resData.status === "success") {
+              const finalId = resData.id || generatedId;
+              this.showToast(
+                "ลงทะเบียนสำเร็จ! รหัสสมาชิกของคุณคือ: " + finalId,
+              );
+              document.getElementById("form-register").reset();
+              this.croppedRegPhotoBase64 = null;
+              if (document.getElementById("reg-pdpa-consent")) {
+                document.getElementById("reg-pdpa-consent").checked = false;
+              }
+              const previewBox = document.getElementById(
+                "reg-photo-preview-box",
+              );
+              if (previewBox) {
+                previewBox.innerHTML = `
+                                <i class="fa-solid fa-camera text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm font-medium text-gray-700">อัปโหลดรูปหน้าตรง <span class="text-red-500">*</span></p>
+                                <p class="text-xs text-gray-400 mt-1">AI MediaPipe จะตรวจจับและครอบเฉพาะใบหน้าให้อัตโนมัติ</p>
+                            `;
+              }
+              document.getElementById("reg-photo-label").textContent = "";
+              document.getElementById("reg-idphoto-label").textContent = "";
+              document.getElementById("reg-issue-date").value = "";
+              document.getElementById("reg-expire-date").value = "";
+              await this.fetchMembersFromApi();
+              this.navigate("members");
+            } else {
+              throw new Error(resData.message);
+            }
+          } catch (err) {
+            this.showToast(
+              "เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message,
+              "error",
+            );
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="fa-solid fa-paper-plane mr-2"></i> ยืนยันการสมัครสมาชิก';
+          }
+        },
+
+        handlePayment: async function (e) {
+          e.preventDefault();
+          const btn = document.getElementById("btn-submit-pay");
+          btn.disabled = true;
+          btn.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังอัปโหลดสลิป...';
+
+          try {
+            const slipFile = document.getElementById("pay-slip").files[0];
+            const slipBase64 = slipFile
+              ? await this.fileToBase64(slipFile)
+              : "";
+
+            const payload = {
+              action: "payment",
+              memberId: document.getElementById("pay-member-id").value,
+              amount: document.getElementById("pay-amount").value,
+              slipBase64: slipBase64,
+            };
+
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+
+            const resData = await response.json();
+
+            if (resData.status === "success") {
+              this.showToast(
+                "แจ้งชำระเงินเรียบร้อยแล้ว แอดมินจะทำการตรวจสอบสลิป",
+              );
+              document.getElementById("form-payment").reset();
+              await this.fetchMembersFromApi();
+              this.navigate("status");
+            } else {
+              throw new Error(resData.message);
+            }
+          } catch (err) {
+            this.showToast("เกิดข้อผิดพลาดในการส่งข้อมูล", "error");
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML =
+              '<i class="fa-solid fa-upload mr-2"></i> ส่งข้อมูลแจ้งชำระเงิน';
+          }
+        },
+
+        renderMembersTable: function () {
+          const tbody = document.getElementById("members-table-body");
+          tbody.innerHTML = "";
+          if (this.members.length === 0) {
+            tbody.innerHTML =
+              '<tr><td colspan="5" class="text-center py-6 text-gray-500">ยังไม่มีข้อมูลสมาชิกในระบบ</td></tr>';
+            return;
+          }
+          this.members.forEach((m) => {
+            const tr = document.createElement("tr");
+            const isActive =
+              m.status === "active" || m.status === "อนุมัติแล้ว";
+            tr.innerHTML = `
                         <td class="px-6 py-4 font-mono font-bold text-bonsai-800">${m.id}</td>
                         <td class="px-6 py-4 font-medium">${m.firstName} ${m.lastName}</td>
                         <td class="px-6 py-4 text-gray-600">${m.province}</td>
                         <td class="px-6 py-4">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                ${isActive ? 'อนุมัติแล้ว' : 'รอตรวจสอบ'}
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${isActive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}">
+                                ${isActive ? "อนุมัติแล้ว" : "รอตรวจสอบ"}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-center">
@@ -590,99 +2221,664 @@
                             </button>
                         </td>
                     `;
-                    tbody.appendChild(tr);
-                });
-            },
+            tbody.appendChild(tr);
+          });
+        },
 
-            showMemberDetail: function(id) {
-                const m = this.members.find(x => x.id === id);
-                if (!m) return;
-                document.getElementById('card-id').textContent = m.id;
-                document.getElementById('card-name').textContent = `${m.firstName} ${m.lastName}`;
-                document.getElementById('card-province').textContent = m.province;
-                document.getElementById('card-join-date').textContent = m.joinDate;
-                
-                const photoImg = document.getElementById('card-photo');
-                photoImg.src = m.photoUrl ? m.photoUrl : "https://via.placeholder.com/150x200?text=No+Photo";
-                
-                document.getElementById('card-qrcode').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(m.id)}`;
-                
-                const isActive = m.status === 'active' || m.status === 'อนุมัติแล้ว';
-                document.getElementById('card-status-badge').innerHTML = `
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
-                        ${isActive ? '✓ สมาชิกสมบูรณ์' : '⏳ รอการอนุมัติ'}
+        formatImageUrl: function (url) {
+          if (!url) return "";
+          if (url.startsWith("data:image")) return url;
+          // สกัด File ID จาก Google Drive URL
+          const match =
+            url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+            url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+            url.match(/id=([a-zA-Z0-9_-]+)/);
+          if (match && match[1]) {
+            // ใช้ lh3.googleusercontent.com ซึ่งเป็น Google Image CDN โดยตรง (HTTP 200, ไม่ 302 redirect และรองรับ CORS)
+            return `https://lh3.googleusercontent.com/d/${match[1]}=w1000`;
+          }
+          return url;
+        },
+
+        formatThaiDate: function (d) {
+          if (!d) return "-";
+          try {
+            const dateObj = new Date(d);
+            if (isNaN(dateObj.getTime())) return String(d);
+            return dateObj.toLocaleDateString("th-TH", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            });
+          } catch (e) {
+            return String(d);
+          }
+        },
+
+        updateStats: function () {
+          const totalEl = document.getElementById("home-total-members");
+          const count = Array.isArray(this.members) ? this.members.length : 0;
+          if (totalEl) totalEl.textContent = count;
+          const cardsCountEl = document.getElementById("all-cards-count");
+          if (cardsCountEl) cardsCountEl.textContent = count;
+        },
+
+        renderAllCards: function () {
+          const grid = document.getElementById("all-cards-grid");
+          const empty = document.getElementById("all-cards-empty");
+          if (!grid) return;
+
+          const searchInput = document.getElementById("all-cards-search");
+          const query = (searchInput ? searchInput.value : "").toLowerCase().trim();
+          let filtered = Array.isArray(this.members) ? this.members : [];
+
+          if (query) {
+            filtered = filtered.filter((m) => {
+              const fullName = ((m.firstName || "") + " " + (m.lastName || "")).toLowerCase();
+              const id = (m.id || "").toLowerCase();
+              const province = (m.province || "").toLowerCase();
+              const phone = (m.phone || "").toLowerCase();
+              return (
+                fullName.includes(query) ||
+                id.includes(query) ||
+                province.includes(query) ||
+                phone.includes(query)
+              );
+            });
+          }
+
+          const countEl = document.getElementById("all-cards-count");
+          if (countEl) countEl.textContent = filtered.length;
+
+          if (filtered.length === 0) {
+            grid.innerHTML = "";
+            if (empty) empty.classList.remove("hidden");
+            return;
+          }
+
+          if (empty) empty.classList.add("hidden");
+
+          grid.innerHTML = filtered
+            .map((m) => {
+              const isActive =
+                m.status === "active" ||
+                m.status === "อนุมัติแล้ว" ||
+                m.status === "ใช้งานอยู่";
+              const photoSrc =
+                this.formatImageUrl(m.photoUrl) ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                  m.firstName || "Member",
+                )}&background=0e522c&color=ffffff&size=200&font-size=0.4`;
+              const fullName = `${m.firstName || "-"} ${m.lastName || ""}`.trim();
+              const phone = this.formatPhone(m.phone);
+              const issueDate = this.formatThaiDate(m.issueDate || m.joinDate);
+              const expireDate = this.formatThaiDate(m.expireDate);
+
+              return `
+                <div class="relative w-full rounded-2xl overflow-hidden bg-white text-gray-800 shadow-md hover:shadow-2xl border border-gray-200 transition-all duration-300 flex flex-col justify-between group">
+                  <!-- Header with wood-grain texture -->
+                  <div class="relative px-4 py-3 flex justify-between items-center text-white border-b border-emerald-800/40" style="background-color: #136136; background-image: url('card-header-bg.png'); background-repeat: repeat-x; background-size: auto 100%; background-position: center;">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-10 h-10 bg-white rounded-full p-0.5 shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <img src="logo.png" alt="โลโก้สมาคม" class="w-full h-full object-contain">
+                      </div>
+                      <div>
+                        <h4 class="text-sm font-bold leading-tight tracking-wide text-white">สมาคมบอนไซไทย</h4>
+                        <p class="text-[10.5px] text-emerald-100/90 font-normal">Thai Bonsai Association</p>
+                      </div>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-100 tracking-widest uppercase font-sans">MEMBER CARD</span>
+                  </div>
+
+                  <!-- Body with tree watermark -->
+                  <div class="relative p-4 sm:p-5 bg-white overflow-hidden flex-grow">
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05]">
+                      <img src="watermark-tree.png" alt="watermark" class="w-56 h-56 object-contain">
+                    </div>
+
+                    <div class="relative z-10 flex gap-4 items-start">
+                      <!-- Photo -->
+                      <div class="w-24 h-32 sm:w-28 sm:h-36 rounded-xl overflow-hidden bg-slate-100 border border-gray-200 shadow-sm flex-shrink-0">
+                        <img referrerpolicy="no-referrer" src="${photoSrc}" alt="${fullName}" class="w-full h-full object-cover">
+                      </div>
+
+                      <!-- Info -->
+                      <div class="flex-grow min-w-0">
+                        <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider leading-none">ชื่อ-นามสกุล / NAME</div>
+                        <div class="text-base sm:text-lg font-bold text-gray-900 leading-tight mt-1 truncate">${fullName}</div>
+
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 mt-2.5 pt-2 border-t border-gray-100">
+                          <div>
+                            <div class="text-[9.5px] font-semibold text-gray-400 uppercase leading-none">เลขสมาชิก / ID</div>
+                            <div class="text-xs sm:text-sm font-black font-mono text-[#0e522c] leading-tight mt-0.5 truncate">${m.id}</div>
+                          </div>
+                          <div>
+                            <div class="text-[9.5px] font-semibold text-gray-400 uppercase leading-none">จังหวัด / PROVINCE</div>
+                            <div class="text-xs sm:text-sm font-bold text-gray-800 leading-tight mt-0.5 truncate">${m.province || "-"}</div>
+                          </div>
+                          <div>
+                            <div class="text-[9.5px] font-semibold text-gray-400 uppercase leading-none">ออกบัตร / ISSUED</div>
+                            <div class="text-[11px] font-bold text-gray-700 leading-tight mt-0.5">${issueDate}</div>
+                          </div>
+                          <div>
+                            <div class="text-[9.5px] font-semibold text-gray-400 uppercase leading-none">หมดอายุ / EXPIRY</div>
+                            <div class="text-[11px] font-bold text-red-600 leading-tight mt-0.5">${expireDate}</div>
+                          </div>
+                          <div>
+                            <div class="text-[9.5px] font-semibold text-gray-400 uppercase leading-none">โทรศัพท์ / PHONE</div>
+                            <div class="text-[11px] font-bold text-gray-700 leading-tight mt-0.5 truncate">${phone}</div>
+                          </div>
+                          <div>
+                            <div class="text-[9.5px] font-semibold text-gray-400 uppercase leading-none">สถานะ / STATUS</div>
+                            <div class="mt-0.5">
+                              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
+                                <span class="w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-600' : 'bg-amber-500'}"></span>
+                                ${isActive ? 'ใช้งานอยู่' : 'รออนุมัติ'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Footer Bar & Quick Action Button -->
+                  <div class="bg-gray-50 border-t border-gray-100 px-4 py-2.5 flex justify-between items-center">
+                    <span class="text-[10px] text-gray-500 font-medium">สมาคมบอนไซไทย</span>
+                    <button
+                      type="button"
+                      onclick="app.showMemberDetail('${m.id}')"
+                      class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <i class="fa-solid fa-expand text-[10px]"></i> ดูบัตรขนาดเต็ม / ดาวน์โหลด
+                    </button>
+                  </div>
+                </div>
+              `;
+            })
+            .join("");
+        },
+
+        formatPhone: function (p) {
+          if (!p) return "-";
+          let s = String(p).trim();
+          if (!s.startsWith("0") && s.length === 9) s = "0" + s;
+          if (s.length === 10) {
+            return `${s.slice(0, 3)}-${s.slice(3, 6)}-${s.slice(6)}`;
+          } else if (s.length === 9) {
+            return `${s.slice(0, 2)}-${s.slice(2, 5)}-${s.slice(5)}`;
+          }
+          return s;
+        },
+
+        showMemberDetail: function (id) {
+          const m = this.members.find((x) => x.id === id);
+          if (!m) return;
+          document.getElementById("card-id").textContent = m.id;
+          document.getElementById("card-name").textContent =
+            `${m.firstName} ${m.lastName}`;
+          document.getElementById("card-province").textContent =
+            m.province || "-";
+
+          const phoneEl = document.getElementById("card-phone");
+          if (phoneEl) phoneEl.textContent = this.formatPhone(m.phone);
+
+          let formattedDate = m.joinDate || "-";
+          let expireDateFormatted = "-";
+          if (m.joinDate) {
+            try {
+              const d = new Date(m.joinDate);
+              if (!isNaN(d.getTime())) {
+                formattedDate = d.toLocaleDateString("th-TH", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                });
+
+                // คำนวณวันหมดอายุมาตรฐาน 4 ปี
+                const ed = new Date(d);
+                ed.setFullYear(ed.getFullYear() + 4);
+                expireDateFormatted = ed.toLocaleDateString("th-TH", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                });
+              }
+            } catch (e) {}
+          }
+          if (m.expireDate) {
+            try {
+              const ed = new Date(m.expireDate);
+              if (!isNaN(ed.getTime())) {
+                expireDateFormatted = ed.toLocaleDateString("th-TH", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                });
+              }
+            } catch (e) {}
+          }
+
+          // ถ้ามี issueDate ให้ใช้แทน joinDate สำหรับแสดงบนบัตร
+          if (m.issueDate) {
+            try {
+              const id = new Date(m.issueDate);
+              if (!isNaN(id.getTime())) {
+                formattedDate = id.toLocaleDateString("th-TH", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                });
+              }
+            } catch (e) {}
+          }
+
+          document.getElementById("card-join-date").textContent = formattedDate;
+          const expireEl = document.getElementById("card-expire-date");
+          if (expireEl) expireEl.textContent = expireDateFormatted;
+
+          this.currentCardMemberId = id;
+          this.pendingNewPhotoBase64 = null;
+          this.originalCardPhotoSrc = null;
+          const photoInput = document.getElementById("card-photo-input");
+          if (photoInput) photoInput.value = "";
+          const actionsEl = document.getElementById("card-photo-actions");
+          const triggerBtn = document.getElementById(
+            "btn-change-photo-trigger",
+          );
+          if (actionsEl) actionsEl.classList.add("hidden");
+          if (triggerBtn) triggerBtn.classList.remove("hidden");
+
+          const photoImg = document.getElementById("card-photo");
+          photoImg.referrerPolicy = "no-referrer";
+          const photoSrc = this.formatImageUrl(m.photoUrl);
+
+          if (photoSrc) {
+            // กำหนด onerror ล่วงหน้าก่อนกำหนด src
+            photoImg.onerror = function () {
+              this.onerror = null;
+              this.referrerPolicy = "no-referrer";
+              const match =
+                (m.photoUrl || "").match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                (m.photoUrl || "").match(/id=([a-zA-Z0-9_-]+)/);
+              if (match && match[1] && !this.src.includes("drive.google.com")) {
+                this.src = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+              } else {
+                this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.firstName || "Member")}&background=0e522c&color=ffffff&size=300&font-size=0.4`;
+              }
+            };
+
+            // กำหนด URL ของรูปภาพ
+            photoImg.src = photoSrc;
+
+            // โหลดและแปลงรูปเป็น Base64 ในเบื้องหลัง เพื่อให้ html2canvas ดาวน์โหลดรูปบัตรได้อย่างสมบูรณ์
+            if (!photoSrc.startsWith("data:")) {
+              fetch(photoSrc, { referrerPolicy: "no-referrer" })
+                .then((res) => {
+                  if (!res.ok) throw new Error("HTTP error " + res.status);
+                  return res.blob();
+                })
+                .then((blob) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    if (reader.result) {
+                      photoImg.src = reader.result;
+                    }
+                  };
+                  reader.readAsDataURL(blob);
+                })
+                .catch((err) => {
+                  console.warn(
+                    "Background base64 conversion note:",
+                    err.message,
+                  );
+                });
+            }
+          } else {
+            photoImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(m.firstName || "Member")}&background=0e522c&color=ffffff&size=300&font-size=0.4`;
+          }
+
+          const isActive =
+            m.status === "active" ||
+            m.status === "อนุมัติแล้ว" ||
+            m.status === "ใช้งานอยู่";
+          document.getElementById("card-status-badge").innerHTML = `
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-300" : "bg-amber-50 text-amber-700 border border-amber-300"}">
+                        <span class="w-2.5 h-2.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-amber-500"}"></span>
+                        ${isActive ? "ใช้งานอยู่" : "รอการอนุมัติ"}
                     </span>
                 `;
 
-                this.navigate('member-detail');
-            },
+          this.navigate("member-detail");
+        },
 
-            checkStatus: function() {
-                const q = document.getElementById('status-query').value.trim();
-                const m = this.members.find(x => x.id === q || x.phone === q);
-                const res = document.getElementById('status-result');
-                if (m) {
-                    const isActive = m.status === 'active' || m.status === 'อนุมัติแล้ว';
-                    res.innerHTML = `
-                        <div class="p-4 ${isActive ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'} border rounded-xl">
+        onCardPhotoSelected: async function (event) {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+
+          if (!file.type.startsWith("image/")) {
+            this.showToast("กรุณาเลือกไฟล์รูปภาพเท่านั้น", "error");
+            return;
+          }
+
+          try {
+            this.showToast(
+              "กำลังตรวจจับใบหน้าและครอบรูปด้วย MediaPipe...",
+              "info",
+            );
+            const cropRes = await this.cropFaceWithMediaPipe(file);
+            const base64 = cropRes.base64;
+            this.pendingNewPhotoBase64 = base64;
+
+            const photoImg = document.getElementById("card-photo");
+            if (!this.originalCardPhotoSrc) {
+              this.originalCardPhotoSrc = photoImg.src;
+            }
+
+            // แสดงพรีวิวรูปภาพที่ครอบใบหน้าแล้วบนการ์ดทันที
+            photoImg.src = base64;
+
+            const actionsEl = document.getElementById("card-photo-actions");
+            const triggerBtn = document.getElementById(
+              "btn-change-photo-trigger",
+            );
+            if (actionsEl) actionsEl.classList.remove("hidden");
+            if (triggerBtn) triggerBtn.classList.add("hidden");
+
+            if (cropRes.detected) {
+              this.showToast(
+                'AI MediaPipe ครอบเฉพาะใบหน้าเรียบร้อย! กรุณากด "บันทึกรูปใหม่"',
+                "success",
+              );
+            } else {
+              this.showToast(
+                'เลือกรูปใหม่แล้ว! กรุณากดปุ่ม "บันทึก" เพื่อบันทึกและลบรูปเก่า',
+                "success",
+              );
+            }
+          } catch (err) {
+            console.error("Photo read error:", err);
+            this.showToast("ไม่สามารถอ่านไฟล์รูปภาพได้", "error");
+          }
+        },
+
+        cancelCardPhotoChange: function () {
+          const photoImg = document.getElementById("card-photo");
+          if (this.originalCardPhotoSrc) {
+            photoImg.src = this.originalCardPhotoSrc;
+          }
+          this.pendingNewPhotoBase64 = null;
+          this.originalCardPhotoSrc = null;
+
+          const input = document.getElementById("card-photo-input");
+          if (input) input.value = "";
+
+          const actionsEl = document.getElementById("card-photo-actions");
+          const triggerBtn = document.getElementById(
+            "btn-change-photo-trigger",
+          );
+          if (actionsEl) actionsEl.classList.add("hidden");
+          if (triggerBtn) triggerBtn.classList.remove("hidden");
+        },
+
+        saveCardPhoto: async function () {
+          if (!this.pendingNewPhotoBase64) {
+            this.showToast("กรุณาเลือกรูปภาพใหม่ก่อนบันทึก", "error");
+            return;
+          }
+
+          const memberId =
+            this.currentCardMemberId ||
+            document.getElementById("card-id").textContent.trim();
+          if (!memberId) {
+            this.showToast("ไม่พบรหัสสมาชิก", "error");
+            return;
+          }
+
+          const m = this.members.find((x) => x.id === memberId);
+          const oldPhotoUrl = m ? m.photoUrl || "" : "";
+
+          const saveBtn = document.getElementById("btn-save-photo");
+          const origHtml = saveBtn ? saveBtn.innerHTML : "";
+          if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML =
+              '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i> กำลังบันทึก...';
+          }
+
+          try {
+            let newPhotoUrl = this.pendingNewPhotoBase64;
+
+            if (GOOGLE_SCRIPT_URL) {
+              const response = await fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                  action: "updatePhoto",
+                  id: memberId,
+                  photoBase64: this.pendingNewPhotoBase64,
+                  oldPhotoUrl: oldPhotoUrl,
+                }),
+              });
+
+              const resData = await response.json().catch(() => null);
+              if (resData && resData.status === "success") {
+                if (resData.photoUrl) {
+                  newPhotoUrl = resData.photoUrl;
+                }
+              } else if (resData && resData.status === "error") {
+                throw new Error(resData.message || "บันทึกรูปภาพไม่สำเร็จ");
+              }
+            }
+
+            // อัปเดตข้อมูลสมาชิกในเครื่อง
+            if (m) {
+              m.photoUrl = newPhotoUrl;
+            }
+
+            this.originalCardPhotoSrc = null;
+            this.pendingNewPhotoBase64 = null;
+
+            const input = document.getElementById("card-photo-input");
+            if (input) input.value = "";
+
+            const actionsEl = document.getElementById("card-photo-actions");
+            const triggerBtn = document.getElementById(
+              "btn-change-photo-trigger",
+            );
+            if (actionsEl) actionsEl.classList.add("hidden");
+            if (triggerBtn) triggerBtn.classList.remove("hidden");
+
+            this.showToast(
+              "เปลี่ยนรูปภาพและลบรูปเก่าเรียบร้อยแล้ว!",
+              "success",
+            );
+
+            // อัปเดตหน้าตารางสมาชิก และ admin dashboard
+            this.renderMembersTable();
+            this.renderAdminDashboard();
+
+            // ซิงค์ข้อมูลล่าสุดจาก Google Sheets ถ้ามี API URL
+            if (GOOGLE_SCRIPT_URL) {
+              this.fetchMembersFromApi();
+            }
+          } catch (err) {
+            console.error("Save photo error:", err);
+            this.showToast(
+              "เกิดข้อผิดพลาดในการบันทึก: " + err.message,
+              "error",
+            );
+          } finally {
+            if (saveBtn) {
+              saveBtn.disabled = false;
+              saveBtn.innerHTML = origHtml;
+            }
+          }
+        },
+
+        downloadCard: async function () {
+          const cardEl = document.getElementById("print-area");
+          if (!cardEl) return;
+
+          const memberId =
+            document.getElementById("card-id").textContent.trim() || "member";
+          const btn = document.getElementById("btn-download-card");
+          const origHtml = btn ? btn.innerHTML : "";
+          if (btn) {
+            btn.disabled = true;
+            btn.innerHTML =
+              '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังบันทึกรูปบัตร...';
+          }
+
+          try {
+            // ใช้ html2canvas จับภาพเฉพาะตัวการ์ด #print-area ด้วย scale 3 เพื่อความคมชัดสูง
+            const canvas = await html2canvas(cardEl, {
+              scale: 3,
+              useCORS: true,
+              allowTaint: true,
+              backgroundColor: "#ffffff",
+              logging: false,
+            });
+
+            const imgData = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.download = `TBA-MemberCard-${memberId}.png`;
+            link.href = imgData;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            this.showToast(
+              "บันทึกบัตรสมาชิกลงเครื่องเรียบร้อยแล้ว!",
+              "success",
+            );
+          } catch (err) {
+            console.error("Download card error:", err);
+            this.showToast("เกิดข้อผิดพลาดในการดาวน์โหลดรูปบัตร", "error");
+          } finally {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = origHtml;
+            }
+          }
+        },
+
+        checkStatus: function () {
+          const q = document.getElementById("status-query").value.trim();
+          const m = this.members.find(
+            (x) => x.id === q || String(x.phone).trim() === q,
+          );
+          const res = document.getElementById("status-result");
+          if (m) {
+            const isActive =
+              m.status === "active" || m.status === "อนุมัติแล้ว";
+            res.innerHTML = `
+                        <div class="p-4 ${isActive ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-amber-50 border-amber-200 text-amber-900"} border rounded-xl">
                             <div class="font-bold text-lg mb-1"><i class="fa-solid fa-circle-check mr-2"></i>พบข้อมูลสมาชิก</div>
                             <div>ชื่อ-นามสกุล: <strong>คุณ${m.firstName} ${m.lastName}</strong></div>
                             <div>รหัสสมาชิก: <strong>${m.id}</strong></div>
-                            <div>สถานะปัจจุบัน: <strong>${isActive ? 'อนุมัติแล้ว (สมาชิกสมบูรณ์)' : 'รอตรวจสอบการชำระเงิน'}</strong></div>
+                            <div>สถานะปัจจุบัน: <strong>${isActive ? "อนุมัติแล้ว (สมาชิกสมบูรณ์)" : "รอตรวจสอบการชำระเงิน"}</strong></div>
                         </div>
                     `;
-                } else {
-                    res.innerHTML = `
+          } else {
+            res.innerHTML = `
                         <div class="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl">
                             <i class="fa-solid fa-circle-xmark mr-2"></i>ไม่พบข้อมูลในระบบ กรุณาตรวจสอบเลขรหัสสมาชิกหรือเบอร์โทรศัพท์อีกครั้ง
                         </div>
                     `;
-                }
-            },
+          }
+        },
 
-            renderAdminDashboard: function() {
-                const tbody = document.getElementById('admin-table-body');
-                tbody.innerHTML = '';
-                this.members.forEach(m => {
-                    const tr = document.createElement('tr');
-                    const isActive = m.status === 'active' || m.status === 'อนุมัติแล้ว';
-                    tr.innerHTML = `
+        renderAdminDashboard: function () {
+          if (!this.isAdminLoggedIn()) {
+            this.navigate("home");
+            return;
+          }
+          const tbody = document.getElementById("admin-table-body");
+          tbody.innerHTML = "";
+          this.members.forEach((m) => {
+            const tr = document.createElement("tr");
+            const isActive =
+              m.status === "active" || m.status === "อนุมัติแล้ว";
+            tr.innerHTML = `
                         <td class="px-6 py-4 font-mono font-bold">${m.id}</td>
                         <td class="px-6 py-4">${m.firstName} ${m.lastName}</td>
                         <td class="px-6 py-4 text-xs">
-                            ${m.photoUrl ? `<a href="${m.photoUrl}" target="_blank" class="text-blue-600 underline mr-2"><i class="fa-solid fa-image"></i> รูปถ่าย</a>` : '-'}
-                            ${m.slipUrl ? `<a href="${m.slipUrl}" target="_blank" class="text-yellow-600 underline"><i class="fa-solid fa-receipt"></i> สลิปโอน</a>` : ''}
+                            ${m.photoUrl ? `<a href="${m.photoUrl}" target="_blank" class="text-blue-600 underline mr-2"><i class="fa-solid fa-image"></i> รูปถ่าย</a>` : "-"}
+                            ${m.slipUrl ? `<a href="${m.slipUrl}" target="_blank" class="text-yellow-600 underline"><i class="fa-solid fa-receipt"></i> สลิปโอน</a>` : ""}
                         </td>
                         <td class="px-6 py-4">
-                            <span class="px-2 py-1 rounded text-xs font-semibold ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                ${m.status}
+                            <span class="px-2 py-1 rounded text-xs font-semibold ${isActive ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}">
+                                ${isActive ? "อนุมัติแล้ว" : "รอตรวจสอบ"}
                             </span>
                         </td>
                         <td class="px-6 py-4 text-center">
-                            ${!isActive ? `<button onclick="app.approve('${m.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs shadow">อนุมัติสมาชิก</button>` : '<span class="text-xs text-gray-400">อนุมัติแล้ว</span>'}
+                            ${!isActive ? `<button id="btn-approve-${m.id}" onclick="app.approve('${m.id}', this)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs shadow transition flex items-center justify-center mx-auto gap-1"><i class="fa-solid fa-check"></i> อนุมัติสมาชิก</button>` : '<span class="text-xs text-gray-400 font-semibold"><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>อนุมัติแล้ว</span>'}
                         </td>
                     `;
-                    tbody.appendChild(tr);
-                });
-            },
+            tbody.appendChild(tr);
+          });
+        },
 
-            approve: async function(id) {
-                if (!GOOGLE_SCRIPT_URL) return;
-                try {
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify({ action: "updateStatus", id: id, status: "active", expireDate: "2027-12-31", type: "ตลอดชีพ" })
-                    });
-                    this.showToast("อนุมัติสมาชิกเรียบร้อยแล้ว");
-                    await this.fetchMembersFromApi();
-                    this.renderAdminDashboard();
-                } catch (e) {
-                    this.showToast("เกิดข้อผิดพลาดในการอนุมัติ", "error");
-                }
+        approve: async function (id, btnElement) {
+          if (!this.isAdminLoggedIn()) {
+            this.openLoginModal();
+            return;
+          }
+          if (!GOOGLE_SCRIPT_URL) return;
+
+          // ป้องกันการกดปุ่มซ้ำหลายครั้ง
+          if (btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerHTML =
+              '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังอนุมัติ...';
+            btnElement.classList.add("opacity-75", "cursor-not-allowed");
+          }
+
+          try {
+            const response = await fetch(GOOGLE_SCRIPT_URL, {
+              method: "POST",
+              body: JSON.stringify({
+                action: "updateStatus",
+                id: id,
+                status: "active",
+                expireDate: "2027-12-31",
+                type: "ตลอดชีพ",
+              }),
+            });
+
+            const resJson = await response.json().catch(() => null);
+            if (resJson && resJson.status === "error") {
+              throw new Error(
+                resJson.message || "เกิดข้อผิดพลาดจากระบบหลังบ้าน",
+              );
             }
-        };
 
-        document.addEventListener('DOMContentLoaded', () => app.init());
+            // อัปเดตสถานะในหน่วยความจำทันที (Optimistic update)
+            const target = this.members.find((x) => x.id === id);
+            if (target) {
+              target.status = "active";
+            }
+
+            this.showToast("อนุมัติสมาชิก " + id + " เรียบร้อยแล้ว");
+            this.renderAdminDashboard();
+            this.renderMembersTable();
+
+            // ดึงข้อมูลล่าสุดซิงค์กับเซิร์ฟเวอร์
+            await this.fetchMembersFromApi();
+          } catch (e) {
+            console.error("Approve Error:", e);
+            this.showToast("เกิดข้อผิดพลาดในการอนุมัติ: " + e.message, "error");
+            if (btnElement) {
+              btnElement.disabled = false;
+              btnElement.innerHTML =
+                '<i class="fa-solid fa-check"></i> อนุมัติสมาชิก';
+              btnElement.classList.remove("opacity-75", "cursor-not-allowed");
+            }
+          }
+        },
+      };
+
+      document.addEventListener("DOMContentLoaded", () => app.init());
     </script>
-</body>
+  </body>
 </html>

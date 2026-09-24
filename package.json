@@ -1,0 +1,20 @@
+{
+  "name": "bonsai-member",
+  "version": "1.0.0",
+  "description": "ระบบทะเบียนสมาชิก สมาคมบอนไซไทย",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx --yes serve .",
+    "dev": "npx --yes serve ."
+  },
+  "keywords": [
+    "bonsai",
+    "thai-bonsai-association"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0"
+  }
+}
