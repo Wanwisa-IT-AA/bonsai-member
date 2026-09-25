@@ -17,11 +17,11 @@ const INITIAL_BATCH_METADATA = [
     id: 1,
     batchNumber: 'รุ่นที่ 1',
     batchCode: 'BKK-B1',
-    title: 'ปฐมบทศิลปะบอนไซและสรีรวิทยาไม้แคระ',
+    title: 'เรียนรู้การทำบอนไซเบี้ยงต้น',
     themeColor: 'cyan',
-    date: '15 - 16 มกราคม 2569',
-    location: 'ศูนย์การเรียนรู้สมาคมบอนไซไทย กรุงเทพฯ',
-    instructor: 'อาจารย์ผู้ทรงคุณวุฒิ คณะกรรมการสมาคมบอนไซไทย',
+    date: '20-21 มิถุนายน 2569',
+   location: 'สวนบางกอกบอนไซ ไร่อริยะ กาญจนบุรี',
+    instructor: 'อาจารย์พิศิษย์ อริยะอมรกุล นายกสมาคมบอนไซไทย',
     description: 'เน้นพื้นฐานดิน กระถาง การขยายพันธุ์ และหลักการตัดทดกิ่งไม้เขตร้อน',
     folder: 'bangkokimage/1',
     folderNum: '1'
@@ -30,10 +30,10 @@ const INITIAL_BATCH_METADATA = [
     id: 2,
     batchNumber: 'รุ่นที่ 2',
     batchCode: 'BKK-B2',
-    title: 'ศิลปะการดัดเข้าลวดและการสร้างรูปทรงบอนไซขั้นกลาง',
+    title: 'เรียนรู้การทำบอนไซเบี้ยงต้น',
     themeColor: 'teal',
-    date: '19 - 20 กุมภาพันธ์ 2569',
-    location: 'เรือนกระจกแสดงบอนไซ สวนสมาคมบอนไซกรุงเทพฯ',
+    date: '18 กรกฏาคม 2569',
+    location: 'สวนบางกอกบอนไซ ไร่อริยะ กาญจนบุรี',
     instructor: 'มาสเตอร์ช่างดัดบอนไซระดับสากล',
     description: 'เน้นทักษะการพันลวดอลูมิเนียม การสร้างมิติพุ่มใบ และการทำจิน-ชาริ',
     folder: 'bangkokimage/2',
@@ -43,10 +43,10 @@ const INITIAL_BATCH_METADATA = [
     id: 3,
     batchNumber: 'รุ่นที่ 3',
     batchCode: 'BKK-B3',
-    title: 'เทคนิคระดับสูง การประกวด และการจัดแสดงในระดับสากล',
+    title: 'เรียนรู้การทำบอนไซเบี้ยงต้น',
     themeColor: 'emerald',
-    date: '21 - 22 มีนาคม 2569',
-    location: 'หอประชุมใหญ่ สมาคมบอนไซไทย กรุงเทพมหานคร',
+    date: '19 กันยายน 2569',
+    location: 'สวนบางกอกบอนไซ ไร่อริยะ กาญจนบุรี',
     instructor: 'คณะกรรมการตัดสินประกวดบอนไซแห่งประเทศไทย',
     description: 'การคัดเลือกกระถางดินเผาโบราณ ไม้ประดับร่วม (Shitakusa) และการจัดตู้แท่นโชว์ (Tokonoma)',
     folder: 'bangkokimage/3',
@@ -613,6 +613,422 @@ function CropEditorModal({
   );
 }
 
+/**
+ * หน้าต่างสำหรับแก้ไขข้อมูลผู้ผ่านการอบรม และอัปเดตเปลี่ยนรูปถ่าย
+ */
+function EditTraineeModal({
+  trainee,
+  cardTheme,
+  onSave,
+  onOpenCrop,
+  onClose
+}) {
+  const [name, setName] = useState(trainee.name || '');
+  const [nickname, setNickname] = useState(trainee.nickname || '');
+  const [role, setRole] = useState(trainee.role || 'สมาชิก');
+  const [certNo, setCertNo] = useState(trainee.certNo || '');
+  const [status, setStatus] = useState(trainee.status || 'จบหลักสูตร');
+  const [image, setImage] = useState(trainee.image || '');
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('ไฟล์รูปภาพมีขนาดใหญ่เกิน 5MB กรุณาเลือกไฟล์ที่มีขนาดเล็กลง');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        setImage(uploadEvent.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      alert('กรุณาระบุชื่อ - นามสกุล');
+      return;
+    }
+    onSave({
+      name: name.trim(),
+      nickname: nickname.trim(),
+      role: role.trim(),
+      certNo: certNo.trim(),
+      status: status.trim(),
+      image
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
+      <div className={`rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
+        cardTheme === 'wattvision'
+          ? 'bg-[#181818] border-[#2C2C2E] text-white'
+          : cardTheme === 'poster'
+          ? 'bg-[#041712] border-emerald-800 text-white'
+          : 'bg-white border-gray-200 text-gray-800'
+      }`}>
+        
+        {/* Header */}
+        <div className={`px-6 py-4 flex items-center justify-between border-b ${
+          cardTheme === 'wattvision'
+            ? 'bg-[#1F1F1F] border-[#2C2C2E]'
+            : cardTheme === 'poster'
+            ? 'bg-[#062019] border-emerald-800/80'
+            : 'bg-emerald-50/80 border-emerald-100 text-gray-800'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-base shadow-xs ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#00E5FF] text-[#121212]'
+                : cardTheme === 'poster'
+                ? 'bg-amber-400 text-slate-950'
+                : 'bg-emerald-700 text-white'
+            }`}>
+              <i className="fa-solid fa-user-pen"></i>
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                <span>แก้ไขข้อมูลผู้ผ่านการอบรม</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                  cardTheme === 'wattvision' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {trainee.id}
+                </span>
+              </h3>
+              <p className={`text-xs ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'text-gray-500'}`}>
+                อัปเดตชื่อ รูปถ่าย ตำแหน่ง และสถานะ
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm border transition cursor-pointer ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#141414] border-[#2C2C2E] text-gray-400 hover:text-white'
+                : 'bg-white border-gray-200 text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
+          
+          {/* ส่วนเปลี่ยนรูปภาพ (Photo Update) */}
+          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center gap-4 ${
+            cardTheme === 'wattvision'
+              ? 'bg-[#121212] border-[#2C2C2E]'
+              : 'bg-stone-50 border-gray-200'
+          }`}>
+            <div className="w-24 h-28 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md shrink-0 relative bg-stone-200">
+              <img
+                src={image}
+                alt="รูปถ่าย"
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.src = 'sample-member.jpg'; }}
+              />
+            </div>
+            
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                <i className="fa-solid fa-image mr-1.5"></i>
+                อัปเดตรูปถ่ายผู้เข้าอบรม
+              </div>
+              <p className="text-[11px] opacity-75">
+                เลือกไฟล์รูปภาพจากเครื่องของคุณ (รองรับ JPG, PNG, WEBP)
+              </p>
+              
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-arrow-up-from-bracket"></i>
+                  <span>เลือกรูปจากเครื่อง</span>
+                </button>
+
+                {onOpenCrop && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenCrop({ ...trainee, image, name, nickname })}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition cursor-pointer flex items-center gap-1.5 ${
+                      cardTheme === 'wattvision'
+                        ? 'bg-[#1E1E1E] hover:bg-[#252525] border-[#2C2C2E] text-[#00E5FF]'
+                        : 'bg-white hover:bg-gray-100 border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <i className="fa-solid fa-crop-simple text-amber-500"></i>
+                    <span>ปรับจุดครอบรูป</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ฟิลด์กรอกข้อมูล */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+            <div>
+              <label className="block font-semibold mb-1 opacity-80">
+                ชื่อ - นามสกุลจริง <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="เช่น นายสมชาย ใจดี"
+                required
+                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#141414] border-[#2C2C2E] text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 opacity-80">
+                ชื่อเล่น
+              </label>
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="เช่น คุณชาย"
+                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#141414] border-[#2C2C2E] text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 opacity-80">
+                ตำแหน่งในรุ่น
+              </label>
+              <input
+                type="text"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="เช่น สมาชิก, ประธานรุ่นที่ 1"
+                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#141414] border-[#2C2C2E] text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold mb-1 opacity-80">
+                สถานะการอบรม
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#141414] border-[#2C2C2E] text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              >
+                <option value="จบหลักสูตร">จบหลักสูตร</option>
+                <option value="ผ่านการอบรม">ผ่านการอบรม</option>
+                <option value="อยู่ระหว่างฝึกอบรม">อยู่ระหว่างฝึกอบรม</option>
+                <option value="เกียรตินิยม">เกียรตินิยม</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-semibold mb-1 opacity-80">
+                เลขที่ใบรับรอง (Certificate No.)
+              </label>
+              <input
+                type="text"
+                value={certNo}
+                onChange={(e) => setCertNo(e.target.value)}
+                placeholder="เช่น TBA-CERT-2026-0101"
+                className={`w-full px-3 py-2 rounded-xl border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#141414] border-[#2C2C2E] text-white'
+                    : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end gap-2 pt-3 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-4 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
+                cardTheme === 'wattvision'
+                  ? 'bg-[#252525] hover:bg-[#303030] text-gray-300 border-[#2C2C2E]'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+              }`}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <i className="fa-solid fa-floppy-disk"></i>
+              <span>บันทึกการเปลี่ยนแปลง</span>
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  );
+}
+
+/**
+ * หน้าต่างยืนยันการลบรายชื่อผู้เข้าอบรม
+ */
+function DeleteConfirmModal({
+  trainee,
+  cardTheme,
+  onConfirm,
+  onClose
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+      <div className={`rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border p-6 text-center transform transition-all ${
+        cardTheme === 'wattvision'
+          ? 'bg-[#1E1E1E] border-[#2C2C2E] text-white'
+          : 'bg-white border-gray-200 text-gray-800'
+      }`}>
+        <div className="w-14 h-14 mx-auto rounded-full bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 flex items-center justify-center text-2xl mb-4">
+          <i className="fa-solid fa-trash-can"></i>
+        </div>
+
+        <h3 className="text-lg font-bold">ยืนยันการลบรายชื่อ?</h3>
+        <p className={`text-sm mt-1 ${cardTheme === 'wattvision' ? 'text-gray-300' : 'text-gray-600'}`}>
+          คุณต้องการลบ <strong>{trainee.name} {trainee.nickname ? `(${trainee.nickname})` : ''}</strong> ออกจากทำเนียบผู้ผ่านการอบรมหรือไม่?
+        </p>
+        <p className="text-[11px] opacity-60 mt-1">
+          (ระบบจะซ่อนข้อมูลท่านนี้ออกจากหน้าเว็บ โดยคุณสามารถกู้คืนกลับมาได้ตลอดเวลา)
+        </p>
+
+        <div className="flex items-center justify-center gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className={`px-4 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#252525] hover:bg-[#303030] text-gray-300 border-[#2C2C2E]'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+            }`}
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(trainee)}
+            className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <i className="fa-solid fa-trash-can"></i>
+            <span>ยืนยันการลบ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * หน้าต่างรายการรายชื่อที่ถูกลบ สามารถเลือกกดกู้คืนรายชื่อได้
+ */
+function DeletedListModal({
+  deletedIds,
+  allTrainees,
+  cardTheme,
+  onRestore,
+  onRestoreAll,
+  onClose
+}) {
+  const deletedTrainees = deletedIds.map(id => {
+    const found = allTrainees.find(t => t.id === id);
+    return found || { id, name: `ผู้เข้าอบรมรหัส ${id}`, nickname: '' };
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+      <div className={`rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border p-5 flex flex-col ${
+        cardTheme === 'wattvision'
+          ? 'bg-[#1E1E1E] border-[#2C2C2E] text-white'
+          : 'bg-white border-gray-200 text-gray-800'
+      }`}>
+        <div className="flex items-center justify-between pb-3 border-b">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-sm font-bold">
+              <i className="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 className="text-base font-bold">รายชื่อที่ถูกลบ ({deletedTrainees.length} ท่าน)</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-sm">
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div className="my-4 max-h-72 overflow-y-auto space-y-2 pr-1">
+          {deletedTrainees.map(t => (
+            <div key={t.id} className="p-3 rounded-xl border flex items-center justify-between gap-3 bg-stone-50 dark:bg-stone-900 border-gray-200 dark:border-gray-800">
+              <div className="overflow-hidden text-left">
+                <div className="text-xs font-bold truncate">{t.name}</div>
+                <div className="text-[11px] opacity-70 truncate font-mono">{t.id} {t.nickname ? `(${t.nickname})` : ''}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRestore(t.id)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <i className="fa-solid fa-arrow-rotate-left text-[10px]"></i>
+                <span>กู้คืน</span>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t text-xs">
+          <button
+            type="button"
+            onClick={onRestoreAll}
+            className="text-rose-600 hover:underline font-semibold cursor-pointer"
+          >
+            กู้คืนทั้งหมด
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-xl border bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold cursor-pointer"
+          >
+            ปิด
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BonsaiTraineeChart() {
   const [selectedBatchId, setSelectedBatchId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -642,6 +1058,35 @@ export default function BonsaiTraineeChart() {
       return {};
     }
   });
+
+  // รายการผู้เข้าอบรมที่ถูกแก้ไขข้อมูล (ชื่อ, ชื่อเล่น, บทบาท, รูปถ่าย ฯลฯ)
+  const [editedTrainees, setEditedTrainees] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bonsai_edited_trainees');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  // รายการรหัส ID ของผู้เข้าอบรมที่ถูกลบ
+  const [deletedTraineeIds, setDeletedTraineeIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bonsai_deleted_trainees');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // ผู้เข้าอบรมที่กำลังแก้ไขข้อมูล
+  const [editingTrainee, setEditingTrainee] = useState(null);
+
+  // ผู้เข้าอบรมที่กำลังขอยืนยันการลบ
+  const [deletingTrainee, setDeletingTrainee] = useState(null);
+
+  // แสดงหน้าต่างรายการที่ถูกลบเพื่อกู้คืน
+  const [showDeletedModal, setShowDeletedModal] = useState(false);
 
   // ผู้ผ่านการอบรมที่กำลังเปิดหน้าต่างปรับแต่งการครอบรูป (Interactive Crop Modal)
   const [croppingTrainee, setCroppingTrainee] = useState(null);
@@ -690,7 +1135,67 @@ export default function BonsaiTraineeChart() {
       } catch (e) {}
       return updated;
     });
-    setCropToast(`คืนค่าจุดครอบรูปของ ${filename} เป็นค่าเริ่มต้นแล้ว`);
+  };
+
+  // บันทึกการแก้ไขข้อมูลผู้ผ่านการอบรม
+  const handleSaveTrainee = (traineeId, updatedData) => {
+    setEditedTrainees((prev) => {
+      const updated = {
+        ...prev,
+        [traineeId]: {
+          ...(prev[traineeId] || {}),
+          ...updatedData
+        }
+      };
+      try {
+        localStorage.setItem('bonsai_edited_trainees', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    setCropToast(`อัปเดตข้อมูลของ ${updatedData.name || traineeId} เรียบร้อยแล้ว`);
+    setTimeout(() => setCropToast(null), 4500);
+    setEditingTrainee(null);
+    setSelectedTrainee(null);
+  };
+
+  // ยืนยันการลบผู้ผ่านการอบรม
+  const handleConfirmDelete = (trainee) => {
+    setDeletedTraineeIds((prev) => {
+      const updated = [...new Set([...prev, trainee.id])];
+      try {
+        localStorage.setItem('bonsai_deleted_trainees', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    setCropToast(`ลบ ${trainee.name} เรียบร้อยแล้ว (สามารถกู้คืนได้จากปุ่มถังขยะ)`);
+    setTimeout(() => setCropToast(null), 6000);
+    setDeletingTrainee(null);
+    setSelectedTrainee(null);
+  };
+
+  // กู้คืนรายชื่อที่เคยลบ
+  const handleRestoreTrainee = (traineeId) => {
+    setDeletedTraineeIds((prev) => {
+      const updated = prev.filter(id => id !== traineeId);
+      try {
+        localStorage.setItem('bonsai_deleted_trainees', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    setCropToast(`กู้คืนรายชื่อเรียบร้อยแล้ว`);
+    setTimeout(() => setCropToast(null), 4500);
+  };
+
+  // กู้คืนรายชื่อทั้งหมด
+  const handleRestoreAll = () => {
+    setDeletedTraineeIds([]);
+    try {
+      localStorage.removeItem('bonsai_deleted_trainees');
+    } catch (e) {}
+    setShowDeletedModal(false);
+    setCropToast('กู้คืนรายชื่อทั้งหมดเรียบร้อยแล้ว');
     setTimeout(() => setCropToast(null), 4500);
   };
 
@@ -838,12 +1343,20 @@ export default function BonsaiTraineeChart() {
     };
   }, [scanFolderImages]);
 
-  // คำนวณยอดรวมสถิติ
+  // คำนวณยอดรวมสถิติ (หักคนที่ถูกลบออก)
   const totalTrainees = useMemo(() => {
-    return batches.reduce((acc, batch) => acc + batch.trainees.length, 0);
+    return batches.reduce((acc, batch) => {
+      const active = batch.trainees.filter(t => !deletedTraineeIds.includes(t.id));
+      return acc + active.length;
+    }, 0);
+  }, [batches, deletedTraineeIds]);
+
+  // รวมรายชื่อเดิมทั้งหมดสำหรับใช้ในหน้าต่างถังขยะ/กู้คืน
+  const allRawTrainees = useMemo(() => {
+    return batches.flatMap(b => b.trainees);
   }, [batches]);
 
-  // กรองข้อมูลตามรุ่นและคำค้นหา
+  // กรองข้อมูลตามรุ่น คำค้นหา และผสานการแก้ไข/ลบ
   const filteredBatches = useMemo(() => {
     return batches
       .filter((batch) => {
@@ -853,20 +1366,26 @@ export default function BonsaiTraineeChart() {
         return true;
       })
       .map((batch) => {
-        const trainees = batch.trainees.filter((t) => {
-          if (!searchTerm.trim()) return true;
-          const q = searchTerm.toLowerCase();
-          return (
-            t.name.toLowerCase().includes(q) ||
-            t.id.toLowerCase().includes(q) ||
-            (t.nickname && t.nickname.toLowerCase().includes(q)) ||
-            batch.batchNumber.toLowerCase().includes(q)
-          );
-        });
+        const trainees = batch.trainees
+          .filter((t) => !deletedTraineeIds.includes(t.id))
+          .map((t) => {
+            const edit = editedTrainees[t.id];
+            return edit ? { ...t, ...edit } : t;
+          })
+          .filter((t) => {
+            if (!searchTerm.trim()) return true;
+            const q = searchTerm.toLowerCase();
+            return (
+              t.name.toLowerCase().includes(q) ||
+              t.id.toLowerCase().includes(q) ||
+              (t.nickname && t.nickname.toLowerCase().includes(q)) ||
+              batch.batchNumber.toLowerCase().includes(q)
+            );
+          });
         return { ...batch, trainees };
       })
       .filter((batch) => batch.trainees.length > 0);
-  }, [batches, selectedBatchId, searchTerm]);
+  }, [batches, selectedBatchId, searchTerm, editedTrainees, deletedTraineeIds]);
 
   // คำนวณ Style การครอบรูปภาพ (Face Auto-Crop + รองรับพิกัดที่กำหนดเองจากการกดเลือกบนรูป)
   const getImageStyle = (filename) => {
@@ -1362,6 +1881,24 @@ export default function BonsaiTraineeChart() {
               </button>
             </div>
 
+            {/* ปุ่มถังขยะสำหรับดูและกู้คืนรายชื่อที่เคยลบ */}
+            {deletedTraineeIds.length > 0 && (
+              <button
+                onClick={() => setShowDeletedModal(true)}
+                className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 border shrink-0 animate-pulse ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-rose-950/40 text-rose-400 border-rose-800/60 hover:bg-rose-900/50'
+                    : cardTheme === 'poster'
+                    ? 'bg-rose-950/70 text-rose-300 border-rose-700/70 hover:bg-rose-900/80'
+                    : 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100 shadow-2xs'
+                }`}
+                title="ดูรายชื่อที่ถูกลบและกู้คืน"
+              >
+                <i className="fa-solid fa-trash-can text-rose-500"></i>
+                <span>ถังขยะ ({deletedTraineeIds.length})</span>
+              </button>
+            )}
+
           </div>
 
         </div>
@@ -1562,14 +2099,31 @@ export default function BonsaiTraineeChart() {
                               : 'from-black/15 to-transparent'
                           }`}></div>
 
-                          {/* Indicator Crop Tag Icon */}
-                          {cropMode === 'face' && (
-                            <div className="absolute top-1.5 left-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="px-1.5 py-0.5 bg-black/70 text-[#00E5FF] text-[9px] rounded-md font-mono border border-white/10">
-                                <i className="fa-solid fa-crop-simple"></i> Auto Crop
-                              </span>
-                            </div>
-                          )}
+                          {/* Quick Action Buttons (Edit & Delete) on Card */}
+                          <div className="absolute top-1.5 left-1.5 z-30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTrainee(trainee);
+                              }}
+                              className="w-7 h-7 rounded-lg bg-black/85 hover:bg-emerald-600 text-white backdrop-blur-xs border border-white/20 transition-all flex items-center justify-center shadow-md cursor-pointer hover:scale-110"
+                              title="แก้ไขข้อมูล / อัปเดตรูปถ่ายคนนี้"
+                            >
+                              <i className="fa-solid fa-pen text-[10px] text-emerald-300"></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingTrainee(trainee);
+                              }}
+                              className="w-7 h-7 rounded-lg bg-black/85 hover:bg-rose-600 text-white backdrop-blur-xs border border-white/20 transition-all flex items-center justify-center shadow-md cursor-pointer hover:scale-110"
+                              title="ลบคนนี้ออกจากทำเนียบ"
+                            >
+                              <i className="fa-solid fa-trash-can text-[10px] text-rose-300"></i>
+                            </button>
+                          </div>
 
                           {/* Custom Crop Active Badge */}
                           {customCropMap[trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '')] && (
@@ -1586,11 +2140,10 @@ export default function BonsaiTraineeChart() {
                               e.stopPropagation();
                               setCroppingTrainee(trainee);
                             }}
-                            className="absolute top-1.5 right-1.5 z-20 px-2 py-0.5 bg-black/80 hover:bg-emerald-600 text-white text-[10px] font-medium rounded-lg backdrop-blur-xs border border-white/20 transition-all flex items-center gap-1 shadow-md cursor-pointer hover:scale-105"
+                            className="absolute top-1.5 right-1.5 z-30 px-2 py-1 bg-black/80 hover:bg-amber-600 text-white text-[10px] font-medium rounded-lg backdrop-blur-xs border border-white/20 transition-all flex items-center gap-1 shadow-md cursor-pointer hover:scale-105"
                             title="คลิกเพื่อเลือกจุดครอบรูปภาพนี้เอง"
                           >
                             <i className="fa-solid fa-crop-simple text-amber-300"></i>
-                
                           </button>
 
                           {/* Click-to-Crop Overlay Hint on Hover */}
@@ -1879,21 +2432,54 @@ export default function BonsaiTraineeChart() {
                 ? 'bg-[#191919] border-[#2C2C2E]'
                 : 'bg-gray-50 border-gray-200'
             }`}>
-              <button
-                onClick={() => {
-                  const t = selectedTrainee;
-                  setSelectedTrainee(null);
-                  setCroppingTrainee(t);
-                }}
-                className={`px-3.5 py-2 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
-                  cardTheme === 'wattvision'
-                    ? 'bg-[#00E5FF]/20 text-[#00E5FF] hover:bg-[#00E5FF]/30 border border-[#00E5FF]/50'
-                    : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
-                }`}
-                title="ปรับจุดโฟกัสหรือระยะซูมของรูปนี้"
-              >
-                <i className="fa-solid fa-crop-simple"></i> ปรับจุดครอบรูปภาพนี้
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    const t = selectedTrainee;
+                    setSelectedTrainee(null);
+                    setEditingTrainee(t);
+                  }}
+                  className={`px-3 py-2 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
+                    cardTheme === 'wattvision'
+                      ? 'bg-emerald-950/60 text-emerald-400 hover:bg-emerald-900/80 border border-emerald-500/40'
+                      : 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                  }`}
+                  title="แก้ไขชื่อ ตำแหน่ง หรืออัปโหลดรูปภาพใหม่"
+                >
+                  <i className="fa-solid fa-pen-to-square"></i>
+                  <span>แก้ไข / เปลี่ยนรูป</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const t = selectedTrainee;
+                    setSelectedTrainee(null);
+                    setCroppingTrainee(t);
+                  }}
+                  className={`px-3 py-2 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
+                    cardTheme === 'wattvision'
+                      ? 'bg-[#00E5FF]/20 text-[#00E5FF] hover:bg-[#00E5FF]/30 border border-[#00E5FF]/50'
+                      : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
+                  }`}
+                  title="ปรับจุดโฟกัสหรือระยะซูมของรูปนี้"
+                >
+                  <i className="fa-solid fa-crop-simple"></i>
+                  <span>ครอบรูป</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const t = selectedTrainee;
+                    setSelectedTrainee(null);
+                    setDeletingTrainee(t);
+                  }}
+                  className="px-3 py-2 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800"
+                  title="ลบคนนี้ออกจากทำเนียบ"
+                >
+                  <i className="fa-solid fa-trash-can"></i>
+                  <span>ลบ</span>
+                </button>
+              </div>
 
               <div className="flex items-center gap-2">
                 <button
@@ -1948,6 +2534,42 @@ export default function BonsaiTraineeChart() {
             handleResetCustomCrop(fname);
           }}
           onClose={() => setCroppingTrainee(null)}
+        />
+      )}
+
+      {/* 6. Edit Trainee Modal (แก้ไขข้อมูล + อัปเดตรูปถ่าย) */}
+      {editingTrainee && (
+        <EditTraineeModal
+          trainee={editingTrainee}
+          cardTheme={cardTheme}
+          onSave={(updatedData) => handleSaveTrainee(editingTrainee.id, updatedData)}
+          onOpenCrop={(t) => {
+            setEditingTrainee(null);
+            setCroppingTrainee(t);
+          }}
+          onClose={() => setEditingTrainee(null)}
+        />
+      )}
+
+      {/* 7. Delete Trainee Confirm Modal */}
+      {deletingTrainee && (
+        <DeleteConfirmModal
+          trainee={deletingTrainee}
+          cardTheme={cardTheme}
+          onConfirm={handleConfirmDelete}
+          onClose={() => setDeletingTrainee(null)}
+        />
+      )}
+
+      {/* 8. Deleted Trainees (Recycle Bin / Trash) Modal */}
+      {showDeletedModal && (
+        <DeletedListModal
+          deletedIds={deletedTraineeIds}
+          allTrainees={allRawTrainees}
+          cardTheme={cardTheme}
+          onRestore={handleRestoreTrainee}
+          onRestoreAll={handleRestoreAll}
+          onClose={() => setShowDeletedModal(false)}
         />
       )}
 
