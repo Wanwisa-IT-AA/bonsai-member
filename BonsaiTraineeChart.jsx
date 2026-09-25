@@ -72,7 +72,7 @@ const FACE_FOCUS_MAP = {
   '79007_0.jpg': { x: 23, y: 24, scale: 1.85 }, // ยืนฝั่งซ้าย
   '79009_0.jpg': { x: 82, y: 35, scale: 1.85 }, // ยืนฝั่งขวา
   '79010_0.jpg': { x: 85, y: 24, scale: 1.85 }, // ยืนฝั่งขวา
-  '79011_0.jpg': { x: 25, y: 28, scale: 1.85 }, // ยืนฝั่งซ้าย
+  '79011_0.jpg': { x: 63, y: 33, scale: 1.85 }, // ยืนฝั่งขวา
   '79012_0.jpg': { x: 50, y: 27, scale: 1.85 }, // อยู่ตรงกลาง
   '79013_0.jpg': { x: 50, y: 25, scale: 1.85 }, // อยู่ตรงกลาง
   '79014_0.jpg': { x: 50, y: 25, scale: 1.85 }  // อยู่ตรงกลาง
@@ -96,7 +96,7 @@ const KNOWN_TRAINEES_MAP = {
   '79008_0.jpg': { name: 'นางสาวศิริพร ไชยวงศ์', nickname: 'คุณศิริ', role: 'สมาชิก', code: 'A021' },
   '79009_0.jpg': { name: 'นายนครินทร์ รัตนโชติ', nickname: 'คุณรินทร์', role: 'สมาชิก', code: 'A022' },
   '79010_0.jpg': { name: 'นายสุรเชษฐ์ เจนพาณิชย์', nickname: 'คุณเชษฐ์', role: 'สมาชิก', code: 'A023' },
-  '79011_0.jpg': { name: 'นายอนุสรณ์ วิชิตกุล', nickname: 'คุณสรณ์', role: 'สมาชิก', code: 'A024' },
+  '79011_0.jpg': { name: 'นางสาวอนุสรณ์ วิชิตกุล', nickname: 'คุณสรณ์', role: 'สมาชิก', code: 'A024' },
   '79012_0.jpg': { name: 'นายชวลิต ลิขิตพงษ์', nickname: 'คุณชวลิต', role: 'สมาชิก', code: 'A025' },
   '79013_0.jpg': { name: 'นายประวิทย์ อักษรทอง', nickname: 'คุณวิทย์', role: 'สมาชิก', code: 'A026' },
   '79014_0.jpg': { name: 'นายภาณุวัฒน์ เด่นดวง', nickname: 'คุณภาณุ', role: 'สมาชิก', code: 'A027' }
@@ -167,14 +167,11 @@ export default function BonsaiTraineeChart() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'org'
 
-  // สไตล์การออกแบบ: 'wattvision' (ตาม desig.md) | 'poster' (ตามแบบรูปสัมมนา) | 'light' (สว่าง)
-  const [cardTheme, setCardTheme] = useState(() => {
-    try {
-      return localStorage.getItem('bonsai_theme_mode') || 'wattvision';
-    } catch (e) {
-      return 'wattvision';
-    }
-  });
+  // สไตล์การออกแบบ: 'light' (สว่าง โทนสีขาวตามที่ขอ) | 'wattvision' | 'poster'
+  const [cardTheme, setCardTheme] = useState('light');
+
+  // ขนาดการ์ด: 'compact' (ย่อสั้นลงตามที่ขอ) | 'normal'
+  const [cardSize, setCardSize] = useState('compact');
 
   // โหมดการครอบรูปภาพ: 'face' (ครอบเฉพาะโซนหน้าขึ้นไป ได้สัดส่วน) | 'full' (แสดงภาพเต็มตัว)
   const [cropMode, setCropMode] = useState(() => {
@@ -232,7 +229,7 @@ export default function BonsaiTraineeChart() {
           nav.style.borderColor = '#092b23';
         }
       } else {
-        document.body.style.backgroundColor = '#f8faf8';
+        document.body.style.backgroundColor = '#FFFFFF';
         if (nav) {
           nav.style.backgroundColor = '#FFFFFF';
           nav.style.borderColor = '#E5E7EB';
@@ -400,7 +397,7 @@ export default function BonsaiTraineeChart() {
         ? 'bg-[#121212] text-white'
         : cardTheme === 'poster'
         ? 'bg-[#030e0c] text-white'
-        : 'bg-[#f8faf8] text-gray-800'
+        : 'bg-white text-gray-800'
     }`}>
       
       {/* Toast แจ้งเตือนเมื่อตรวจพบรูปภาพใหม่ */}
@@ -674,6 +671,48 @@ export default function BonsaiTraineeChart() {
               </button>
             </div>
 
+            {/* ปุ่มย่อขนาดการ์ด: กะทัดรัด (ย่อสั้น) vs ปกติ */}
+            <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#141414] border-[#2C2C2E]'
+                : cardTheme === 'poster'
+                ? 'bg-slate-900 border-emerald-700'
+                : 'bg-stone-100 border-gray-200'
+            }`}>
+              <button
+                onClick={() => setCardSize('compact')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  cardSize === 'compact'
+                    ? cardTheme === 'wattvision'
+                      ? 'bg-[#00E5FF] text-[#121212] shadow-xs'
+                      : cardTheme === 'poster'
+                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                      : 'bg-emerald-800 text-white shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                title="ย่อขนาดการ์ดรูปคนให้สั้นลง กะทัดรัด สบายตา"
+              >
+                <i className="fa-solid fa-compress text-[11px]"></i>
+                <span>การ์ดย่อสั้น</span>
+              </button>
+              <button
+                onClick={() => setCardSize('normal')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+                  cardSize === 'normal'
+                    ? cardTheme === 'wattvision'
+                      ? 'bg-[#00E5FF] text-[#121212] font-bold shadow-xs'
+                      : cardTheme === 'poster'
+                      ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
+                      : 'bg-emerald-800 text-white font-bold shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                title="ขนาดการ์ดทรงยาวปกติ"
+              >
+                <i className="fa-solid fa-expand text-[11px]"></i>
+                <span>ปกติ</span>
+              </button>
+            </div>
+
             {/* ตัวสลับสไตล์การออกแบบ (Theme Selector) - เลือกกลับมาสไตล์เดิมได้ตลอดเวลา */}
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
               cardTheme === 'wattvision'
@@ -913,15 +952,17 @@ export default function BonsaiTraineeChart() {
                         }`}
                         style={cardTheme === 'wattvision' ? { borderRadius: '16px' } : {}}
                       >
-                        {/* Trainee Card Top Photo (รองรับ Auto Face Crop โฟกัสเฉพาะโซนหน้าขึ้นไป) */}
-                        <div className={`relative aspect-[3/4] overflow-hidden ${
-                          cardTheme === 'poster' ? 'rounded-t-[2.2rem]' : 'rounded-t-2xl'
+                        {/* Trainee Card Top Photo (ย่อขนาดให้สั้นลง กะทัดรัด สบายตา) */}
+                        <div className={`relative overflow-hidden ${
+                          cardSize === 'compact' ? 'aspect-[4/3.1]' : 'aspect-[3/4]'
+                        } ${
+                          cardTheme === 'poster' ? 'rounded-t-[2rem]' : 'rounded-t-xl'
                         } ${
                           cardTheme === 'wattvision'
                             ? 'bg-[#121212]'
                             : cardTheme === 'poster'
                             ? 'bg-gradient-to-b from-[#0d3429] via-[#08201a] to-slate-950'
-                            : 'bg-stone-100'
+                            : 'bg-stone-50'
                         }`}>
                           {/* Radial Spotlight Effect behind person */}
                           {cardTheme === 'poster' && (
@@ -944,17 +985,17 @@ export default function BonsaiTraineeChart() {
                           />
 
                           {/* Subtle Bottom Vignette Shadow */}
-                          <div className={`absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t z-10 pointer-events-none ${
+                          <div className={`absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t z-10 pointer-events-none ${
                             cardTheme === 'wattvision'
-                              ? 'from-[#1E1E1E] via-[#1E1E1E]/60 to-transparent'
+                              ? 'from-[#1E1E1E] via-[#1E1E1E]/50 to-transparent'
                               : cardTheme === 'poster'
-                              ? 'from-slate-950 via-slate-950/70 to-transparent'
-                              : 'from-black/30 to-transparent'
+                              ? 'from-slate-950 via-slate-950/60 to-transparent'
+                              : 'from-black/15 to-transparent'
                           }`}></div>
 
                           {/* Indicator Crop Tag Icon */}
                           {cropMode === 'face' && (
-                            <div className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute top-1.5 left-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="px-1.5 py-0.5 bg-black/70 text-[#00E5FF] text-[9px] rounded-md font-mono border border-white/10">
                                 <i className="fa-solid fa-crop-simple"></i> Auto Crop
                               </span>
@@ -962,8 +1003,8 @@ export default function BonsaiTraineeChart() {
                           )}
                         </div>
 
-                        {/* Trainee Details Bottom: เฉพาะชื่อจริง และชื่อเล่น ตามที่ระบุ */}
-                        <div className={`p-3.5 text-center border-t flex flex-col justify-center min-h-[68px] ${
+                        {/* Trainee Details Bottom: กระชับ ไม่ยืดยาว แสดงเฉพาะชื่อจริง และชื่อเล่น */}
+                        <div className={`p-2 sm:p-2.5 text-center border-t flex flex-col justify-center min-h-[48px] ${
                           cardTheme === 'wattvision'
                             ? 'bg-[#1E1E1E] border-[#2C2C2E]'
                             : cardTheme === 'poster'
@@ -971,7 +1012,7 @@ export default function BonsaiTraineeChart() {
                             : 'bg-white border-gray-100'
                         }`}>
                           {/* ชื่อจริง */}
-                          <div className={`text-sm sm:text-base font-bold transition leading-tight truncate ${
+                          <div className={`text-xs sm:text-sm font-bold transition leading-snug truncate ${
                             cardTheme === 'wattvision'
                               ? 'text-white group-hover:text-[#00E5FF]'
                               : cardTheme === 'poster'
@@ -982,7 +1023,7 @@ export default function BonsaiTraineeChart() {
                           </div>
                           
                           {/* ชื่อเล่น */}
-                          <div className={`text-xs sm:text-sm font-medium mt-1 truncate ${
+                          <div className={`text-[11px] sm:text-xs font-medium mt-0.5 truncate ${
                             cardTheme === 'wattvision'
                               ? 'text-[#00E5FF] font-mono'
                               : cardTheme === 'poster'
