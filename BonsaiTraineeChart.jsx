@@ -162,6 +162,457 @@ function parseTraineeFromFilename(filename, index, batchId) {
   };
 }
 
+/**
+ * หน้าต่างสำหรับคลิกเลือกตำแหน่งครอบรูปภาพแบบโต้ตอบ (Interactive Photo Cropper)
+ * ผู้ใช้สามารถคลิกบนภาพถ่ายตรงจุดที่ต้องการ (เช่น โซนใบหน้า) เพื่อให้ระบบโฟกัสและครอบอัตโนมัติ
+ * พร้อมดูภาพตัวอย่างการ์ดจริงแบบ Real-time และปรับซูม/สเกลได้อิสระ
+ */
+function CropEditorModal({
+  trainee,
+  cardTheme,
+  cardSize,
+  currentCrop,
+  defaultCrop,
+  onSave,
+  onReset,
+  onClose
+}) {
+  const [pos, setPos] = useState({
+    x: currentCrop.x !== undefined ? currentCrop.x : 50,
+    y: currentCrop.y !== undefined ? currentCrop.y : 18
+  });
+  const [scale, setScale] = useState(currentCrop.scale || 1.85);
+  const [copied, setCopied] = useState(false);
+  const [hoverCoord, setHoverCoord] = useState(null);
+  const imgRef = useRef(null);
+
+  const filename = trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '');
+
+  // ดักจับการคลิกบนรูปภาพเพื่อคำนวณตำแหน่งพิกัด X% และ Y%
+  const handleImageClick = (e) => {
+    if (!imgRef.current) return;
+    const rect = imgRef.current.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * 100;
+    const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = Math.max(0, Math.min(100, Math.round(rawX)));
+    const y = Math.max(0, Math.min(100, Math.round(rawY)));
+    setPos({ x, y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!imgRef.current) return;
+    const rect = imgRef.current.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * 100;
+    const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+    const x = Math.max(0, Math.min(100, Math.round(rawX)));
+    const y = Math.max(0, Math.min(100, Math.round(rawY)));
+    setHoverCoord({ x, y });
+  };
+
+  // เลื่อนพิกัดทีละนิดด้วยปุ่มควบคุม (Fine-tuning)
+  const nudge = (dx, dy) => {
+    setPos((p) => ({
+      x: Math.max(0, Math.min(100, p.x + dx)),
+      y: Math.max(0, Math.min(100, p.y + dy))
+    }));
+  };
+
+  // คัดลอกโค้ดพิกัดสำหรับนำไปใช้ในโค้ด
+  const copyConfig = () => {
+    const text = `'${filename}': { x: ${pos.x}, y: ${pos.y}, scale: ${scale} }`;
+    try {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch (err) {}
+  };
+
+  const handleReset = () => {
+    const d = defaultCrop || { x: 50, y: 18, scale: 1.85 };
+    setPos({ x: d.x, y: d.y });
+    setScale(d.scale || 1.85);
+    onReset();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
+      <div className={`rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
+        cardTheme === 'wattvision'
+          ? 'bg-[#181818] border-[#2C2C2E] text-white'
+          : cardTheme === 'poster'
+          ? 'bg-[#041712] border-emerald-800 text-white'
+          : 'bg-white border-gray-200 text-gray-800'
+      }`}>
+        
+        {/* Header */}
+        <div className={`px-6 py-4 flex items-center justify-between border-b ${
+          cardTheme === 'wattvision'
+            ? 'bg-[#1F1F1F] border-[#2C2C2E]'
+            : cardTheme === 'poster'
+            ? 'bg-[#062019] border-emerald-800/80'
+            : 'bg-emerald-50/80 border-emerald-100 text-gray-800'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-base shadow-xs ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#00E5FF] text-[#121212]'
+                : cardTheme === 'poster'
+                ? 'bg-amber-400 text-slate-950'
+                : 'bg-emerald-700 text-white'
+            }`}>
+              <i className="fa-solid fa-crop-simple"></i>
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                <span>เลือกจุดครอบรูปภาพด้วยตนเอง</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                  cardTheme === 'wattvision' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {trainee.name} ({trainee.nickname})
+                </span>
+              </h3>
+              <p className={`text-xs ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'text-gray-500'}`}>
+                คลิกบนภาพถ่ายเพื่อเลือกตำแหน่งที่ต้องการให้ระบบครอบรูปอัตโนมัติ
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm border transition cursor-pointer ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#141414] border-[#2C2C2E] text-gray-400 hover:text-white'
+                : 'bg-white border-gray-200 text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        {/* Content Body: แบ่งเป็น ฝั่งรูปถ่ายเต็มให้กด (ซ้าย) + แผงตั้งค่าและตัวอย่างการ์ดจริง (ขวา) */}
+        <div className="p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* ซ้าย: ภาพถ่ายเต็มใบ พร้อมจุดพิกัดเล็งเป้า Reticle ให้คลิก */}
+          <div className="lg:col-span-7 flex flex-col">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="font-semibold flex items-center gap-1.5 text-amber-500">
+                <i className="fa-solid fa-hand-pointer animate-bounce"></i>
+                คลิกบนภาพเพื่อเลือกจุดโฟกัส:
+              </span>
+              <div className="font-mono text-[11px] opacity-75">
+                พิกัด: <strong>X: {pos.x}%</strong>, <strong>Y: {pos.y}%</strong>
+                {hoverCoord && (
+                  <span className="ml-2 text-gray-400 hidden sm:inline">(เมาส์: {hoverCoord.x}%, {hoverCoord.y}%)</span>
+                )}
+              </div>
+            </div>
+
+            {/* Container ภาพถ่ายเต็ม */}
+            <div
+              className={`relative rounded-2xl overflow-hidden border flex items-center justify-center p-1 cursor-crosshair select-none ${
+                cardTheme === 'wattvision'
+                  ? 'bg-[#101010] border-[#2C2C2E]'
+                  : 'bg-stone-900 border-gray-300'
+              }`}
+              style={{ minHeight: '320px' }}
+            >
+              {/* Full Original Image */}
+              <div className="relative inline-block max-w-full">
+                <img
+                  ref={imgRef}
+                  src={trainee.image}
+                  alt={trainee.name}
+                  onClick={handleImageClick}
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={() => setHoverCoord(null)}
+                  className="max-h-[380px] sm:max-h-[420px] w-auto max-w-full object-contain rounded-xl block mx-auto cursor-crosshair"
+                />
+
+                {/* Reticle Target Marker at clicked pos */}
+                <div
+                  className="absolute pointer-events-none transition-all duration-75"
+                  style={{
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                >
+                  {/* Glowing Pulse Rings */}
+                  <div className="w-12 h-12 rounded-full border-2 border-[#00E5FF] bg-[#00E5FF]/20 animate-ping absolute -inset-2"></div>
+                  <div className="w-8 h-8 rounded-full border-2 border-amber-400 bg-amber-400/35 shadow-xl flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white shadow-xs"></div>
+                  </div>
+                  {/* Crosshair guidelines */}
+                  <div className="w-16 h-px bg-amber-300/80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                  <div className="h-16 w-px bg-amber-300/80 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+                  {/* Badge */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-0.5 bg-black/90 text-amber-300 text-[10px] font-mono font-bold rounded-md whitespace-nowrap shadow-lg border border-amber-400/40">
+                    🎯 จุดกึ่งกลาง
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Position Presets & Fine-tuning */}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="opacity-70 text-[11px]">พิกัดสำเร็จรูป:</span>
+                <button
+                  type="button"
+                  onClick={() => setPos({ x: 25, y: 15 })}
+                  className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
+                >
+                  👤 คนยืนซ้าย
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPos({ x: 50, y: 18 })}
+                  className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
+                >
+                  👤 กึ่งกลาง
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPos({ x: 75, y: 18 })}
+                  className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
+                >
+                  👤 คนยืนขวา
+                </button>
+              </div>
+
+              {/* D-Pad Fine Tuning */}
+              <div className="flex items-center gap-1">
+                <span className="opacity-70 text-[11px] mr-1">ขยับละเอียด:</span>
+                <button
+                  type="button"
+                  onClick={() => nudge(-2, 0)}
+                  className="w-6 h-6 rounded bg-stone-200 dark:bg-stone-800 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-[10px] cursor-pointer"
+                  title="เลื่อนซ้าย 2%"
+                >
+                  <i className="fa-solid fa-chevron-left"></i>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => nudge(2, 0)}
+                  className="w-6 h-6 rounded bg-stone-200 dark:bg-stone-800 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-[10px] cursor-pointer"
+                  title="เลื่อนขวา 2%"
+                >
+                  <i className="fa-solid fa-chevron-right"></i>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => nudge(0, -2)}
+                  className="w-6 h-6 rounded bg-stone-200 dark:bg-stone-800 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-[10px] cursor-pointer"
+                  title="เลื่อนขึ้น 2%"
+                >
+                  <i className="fa-solid fa-chevron-up"></i>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => nudge(0, 2)}
+                  className="w-6 h-6 rounded bg-stone-200 dark:bg-stone-800 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-[10px] cursor-pointer"
+                  title="เลื่อนลง 2%"
+                >
+                  <i className="fa-solid fa-chevron-down"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+
+          {/* ขวา: ตัวอย่างการ์ดจริง (Live Preview) & สเกลการซูม */}
+          <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
+            
+            {/* Live Preview Box */}
+            <div className={`p-4 rounded-2xl border flex flex-col items-center justify-center ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#141414] border-[#2C2C2E]'
+                : cardTheme === 'poster'
+                ? 'bg-[#020b08] border-emerald-900/60'
+                : 'bg-stone-50 border-gray-200'
+            }`}>
+              <div className="w-full flex items-center justify-between text-xs font-bold mb-3 px-1">
+                <span className="flex items-center gap-1.5 text-emerald-600">
+                  <i className="fa-solid fa-eye"></i>
+                  ตัวอย่างการ์ดจริง (Live Preview)
+                </span>
+                <span className="text-[11px] font-mono opacity-70">
+                  {cardSize === 'compact' ? 'สัดส่วนย่อสั้น (4:3.1)' : 'สัดส่วนปกติ (3:4)'}
+                </span>
+              </div>
+
+              {/* Exact Card Preview */}
+              <div className={`w-44 sm:w-48 rounded-2xl border overflow-hidden shadow-lg flex flex-col ${
+                cardTheme === 'wattvision'
+                  ? 'bg-[#1E1E1E] border-[#00E5FF]/60 shadow-[#00E5FF]/10'
+                  : cardTheme === 'poster'
+                  ? 'bg-slate-950 border-amber-400 shadow-amber-500/10'
+                  : 'bg-white border-emerald-400 shadow-md'
+              }`}>
+                {/* Image Frame */}
+                <div className={`relative overflow-hidden ${
+                  cardSize === 'compact' ? 'aspect-[4/3.1]' : 'aspect-[3/4]'
+                } ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#121212]'
+                    : cardTheme === 'poster'
+                    ? 'bg-slate-900'
+                    : 'bg-stone-100'
+                }`}>
+                  <img
+                    src={trainee.image}
+                    alt={trainee.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: `${pos.x}% ${pos.y}%`,
+                      transform: `scale(${scale})`,
+                      transformOrigin: `${pos.x}% ${pos.y}%`,
+                      transition: 'none'
+                    }}
+                  />
+                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/75 text-[#00E5FF] text-[9px] rounded font-mono border border-white/10">
+                    {pos.x}%, {pos.y}% • {scale}x
+                  </div>
+                </div>
+
+                {/* Bottom Card Text */}
+                <div className={`p-2.5 text-center border-t flex flex-col justify-center min-h-[48px] ${
+                  cardTheme === 'wattvision'
+                    ? 'bg-[#1E1E1E] border-[#2C2C2E]'
+                    : cardTheme === 'poster'
+                    ? 'bg-slate-950 border-emerald-900/60'
+                    : 'bg-white border-gray-100'
+                }`}>
+                  <div className={`text-xs sm:text-sm font-bold truncate ${
+                    cardTheme === 'wattvision'
+                      ? 'text-white'
+                      : cardTheme === 'poster'
+                      ? 'text-amber-300'
+                      : 'text-gray-900'
+                  }`}>
+                    {trainee.name}
+                  </div>
+                  <div className={`text-[11px] font-medium mt-0.5 truncate ${
+                    cardTheme === 'wattvision'
+                      ? 'text-[#00E5FF] font-mono'
+                      : cardTheme === 'poster'
+                      ? 'text-emerald-300/90'
+                      : 'text-emerald-700'
+                  }`}>
+                    ({trainee.nickname})
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Zoom / Scale Controller */}
+            <div className={`p-4 rounded-2xl border ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#141414] border-[#2C2C2E]'
+                : 'bg-stone-50 border-gray-200'
+            }`}>
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="font-bold flex items-center gap-1.5">
+                  <i className="fa-solid fa-magnifying-glass-plus text-amber-500"></i>
+                  ระยะซูมขยายภาพ (Scale):
+                </span>
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                  {scale}x
+                </span>
+              </div>
+
+              {/* Slider */}
+              <input
+                type="range"
+                min="1.0"
+                max="3.2"
+                step="0.05"
+                value={scale}
+                onChange={(e) => setScale(parseFloat(e.target.value))}
+                className="w-full h-2 bg-stone-300 dark:bg-stone-700 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+              />
+
+              {/* Quick Scale Buttons */}
+              <div className="flex items-center justify-between mt-2.5 gap-1">
+                {[
+                  { label: 'เต็มตัว', val: 1.0 },
+                  { label: 'ครึ่งตัว', val: 1.4 },
+                  { label: 'สัดส่วนมาตรฐาน', val: 1.85 },
+                  { label: 'ซูมใกล้', val: 2.3 },
+                  { label: 'โคลสอัพ', val: 2.8 }
+                ].map((s) => (
+                  <button
+                    key={s.val}
+                    type="button"
+                    onClick={() => setScale(s.val)}
+                    className={`px-1.5 py-1 rounded text-[10px] font-medium transition cursor-pointer ${
+                      scale === s.val
+                        ? 'bg-emerald-700 text-white font-bold'
+                        : 'bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                onClick={() => onSave({ x: pos.x, y: pos.y, scale })}
+                className="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <i className="fa-solid fa-circle-check text-base"></i>
+                <span>บันทึกและนำไปใช้ทันที</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    cardTheme === 'wattvision'
+                      ? 'bg-[#1E1E1E] hover:bg-[#252525] border-[#2C2C2E] text-gray-300'
+                      : 'bg-stone-100 hover:bg-stone-200 border-stone-300 text-gray-700'
+                  }`}
+                  title="คืนค่าเป็นจุดโฟกัสเริ่มต้นของระบบ"
+                >
+                  <i className="fa-solid fa-arrow-rotate-left"></i>
+                  <span>รีเซ็ตค่าเริ่มต้น</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={copyConfig}
+                  className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                    cardTheme === 'wattvision'
+                      ? 'bg-[#1E1E1E] hover:bg-[#252525] border-[#2C2C2E] text-gray-300'
+                      : 'bg-stone-100 hover:bg-stone-200 border-stone-300 text-gray-700'
+                  }`}
+                  title="คัดลอกโค้ดพิกัดนี้เก็บไว้"
+                >
+                  <i className={`fa-solid ${copied ? 'fa-check text-emerald-500' : 'fa-copy'}`}></i>
+                  <span>{copied ? 'คัดลอกแล้ว!' : 'คัดลอกพิกัด'}</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export default function BonsaiTraineeChart() {
   const [selectedBatchId, setSelectedBatchId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -182,6 +633,25 @@ export default function BonsaiTraineeChart() {
     }
   });
 
+  // รายการพิกัดครอบรูปที่ผู้ใช้กำหนดเองจากการกดรูปภาพ (บันทึกจำใน LocalStorage)
+  const [customCropMap, setCustomCropMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bonsai_custom_crops');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  // ผู้ผ่านการอบรมที่กำลังเปิดหน้าต่างปรับแต่งการครอบรูป (Interactive Crop Modal)
+  const [croppingTrainee, setCroppingTrainee] = useState(null);
+
+  // โหมดการกระทำเมื่อกดรูป: 'crop' (กดรูปเพื่อครอบรูปทันที) | 'view' (กดรูปเพื่อดูประวัติ)
+  const [clickAction, setClickAction] = useState('crop');
+
+  // ข้อความแจ้งเตือนเมื่อบันทึกจุดครอบรูปสำเร็จ
+  const [cropToast, setCropToast] = useState(null);
+
   const [selectedTrainee, setSelectedTrainee] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(null);
@@ -196,6 +666,33 @@ export default function BonsaiTraineeChart() {
   });
 
   const prevImageCounts = useRef({});
+
+  // บันทึกและปรับปรุงจุดครอบรูปของผู้ใช้ลงใน State และ LocalStorage
+  const handleSaveCustomCrop = (filename, cropData) => {
+    setCustomCropMap((prev) => {
+      const updated = { ...prev, [filename]: cropData };
+      try {
+        localStorage.setItem('bonsai_custom_crops', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    setCropToast(`บันทึกจุดครอบรูป ${filename} เรียบร้อยแล้ว (X: ${cropData.x}%, Y: ${cropData.y}%, ซูม: ${cropData.scale}x)`);
+    setTimeout(() => setCropToast(null), 4500);
+  };
+
+  // รีเซ็ตจุดครอบรูปเฉพาะภาพนี้กลับเป็นค่าเริ่มต้น
+  const handleResetCustomCrop = (filename) => {
+    setCustomCropMap((prev) => {
+      const updated = { ...prev };
+      delete updated[filename];
+      try {
+        localStorage.setItem('bonsai_custom_crops', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+    setCropToast(`คืนค่าจุดครอบรูปของ ${filename} เป็นค่าเริ่มต้นแล้ว`);
+    setTimeout(() => setCropToast(null), 4500);
+  };
 
   // บันทึกการเลือกธีมและโหมดครอบรูปลง LocalStorage
   const handleThemeChange = (newTheme) => {
@@ -371,10 +868,11 @@ export default function BonsaiTraineeChart() {
       .filter((batch) => batch.trainees.length > 0);
   }, [batches, selectedBatchId, searchTerm]);
 
-  // คำนวณ Style การครอบรูปภาพ (Face Auto-Crop)
+  // คำนวณ Style การครอบรูปภาพ (Face Auto-Crop + รองรับพิกัดที่กำหนดเองจากการกดเลือกบนรูป)
   const getImageStyle = (filename) => {
     if (cropMode === 'face') {
-      const focus = FACE_FOCUS_MAP[filename] || { x: 50, y: 18, scale: 1.8 };
+      const custom = customCropMap[filename];
+      const focus = custom || FACE_FOCUS_MAP[filename] || { x: 50, y: 18, scale: 1.85 };
       return {
         objectFit: 'cover',
         objectPosition: `${focus.x}% ${focus.y}%`,
@@ -400,6 +898,25 @@ export default function BonsaiTraineeChart() {
         : 'bg-white text-gray-800'
     }`}>
       
+      {/* Toast แจ้งเตือนเมื่อบันทึกจุดครอบรูปสำเร็จ */}
+      {cropToast && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-emerald-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-emerald-400 flex items-center gap-3 text-sm">
+            <i className="fa-solid fa-circle-check text-lg text-emerald-400"></i>
+            <div>
+              <p className="font-bold text-white">{cropToast}</p>
+              <p className="text-xs text-emerald-200">ระบบบันทึกและแสดงผลการครอบรูปตำแหน่งนี้ทันทีแล้ว</p>
+            </div>
+            <button
+              onClick={() => setCropToast(null)}
+              className="ml-2 text-emerald-300 hover:text-white"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast แจ้งเตือนเมื่อตรวจพบรูปภาพใหม่ */}
       {newImageAlert && (
         <div className="fixed top-16 right-4 z-50 animate-bounce">
@@ -713,6 +1230,48 @@ export default function BonsaiTraineeChart() {
               </button>
             </div>
 
+            {/* โหมดเมื่อกดที่รูปภาพ: กดรูปเพื่อครอบ (Interactive Crop) vs ดูประวัติ */}
+            <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
+              cardTheme === 'wattvision'
+                ? 'bg-[#141414] border-[#2C2C2E]'
+                : cardTheme === 'poster'
+                ? 'bg-slate-900 border-emerald-700'
+                : 'bg-stone-100 border-gray-200'
+            }`}>
+              <button
+                onClick={() => setClickAction('crop')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  clickAction === 'crop'
+                    ? cardTheme === 'wattvision'
+                      ? 'bg-[#00E5FF] text-[#121212] shadow-xs'
+                      : cardTheme === 'poster'
+                      ? 'bg-amber-400 text-slate-950 shadow-xs'
+                      : 'bg-emerald-800 text-white shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                title="เมื่อกดที่รูปจะเปิดเครื่องมือครอบและเลือกจุดโฟกัสทันที"
+              >
+                <i className="fa-solid fa-crosshairs text-[11px]"></i>
+                <span>กดรูปเพื่อครอบ</span>
+              </button>
+              <button
+                onClick={() => setClickAction('view')}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                  clickAction === 'view'
+                    ? cardTheme === 'wattvision'
+                      ? 'bg-[#00E5FF] text-[#121212] font-bold shadow-xs'
+                      : cardTheme === 'poster'
+                      ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
+                      : 'bg-emerald-800 text-white font-bold shadow-xs'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+                title="เมื่อกดที่รูปจะเปิดดูประวัติและข้อมูลผู้ผ่านการอบรม"
+              >
+                <i className="fa-regular fa-id-badge text-[11px]"></i>
+                <span>ดูประวัติ</span>
+              </button>
+            </div>
+
             {/* ตัวสลับสไตล์การออกแบบ (Theme Selector) - เลือกกลับมาสไตล์เดิมได้ตลอดเวลา */}
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
               cardTheme === 'wattvision'
@@ -942,7 +1501,13 @@ export default function BonsaiTraineeChart() {
                     {batch.trainees.map((trainee) => (
                       <div
                         key={trainee.id}
-                        onClick={() => setSelectedTrainee({ ...trainee, batch })}
+                        onClick={() => {
+                          if (clickAction === 'crop') {
+                            setCroppingTrainee(trainee);
+                          } else {
+                            setSelectedTrainee({ ...trainee, batch });
+                          }
+                        }}
                         className={`group relative rounded-2xl border overflow-hidden transition-all duration-300 cursor-pointer flex flex-col justify-between transform hover:-translate-y-2 ${
                           cardTheme === 'wattvision'
                             ? 'bg-[#1E1E1E] border-[#2C2C2E] hover:border-[#00E5FF] hover:shadow-xl hover:shadow-[#00E5FF]/20'
@@ -998,6 +1563,38 @@ export default function BonsaiTraineeChart() {
                             <div className="absolute top-1.5 left-1.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                               <span className="px-1.5 py-0.5 bg-black/70 text-[#00E5FF] text-[9px] rounded-md font-mono border border-white/10">
                                 <i className="fa-solid fa-crop-simple"></i> Auto Crop
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Custom Crop Active Badge */}
+                          {customCropMap[trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '')] && (
+                            <div className="absolute bottom-1.5 right-1.5 z-20 px-1.5 py-0.5 bg-emerald-950/85 text-emerald-300 text-[9px] font-bold rounded-md backdrop-blur-xs border border-emerald-500/40 flex items-center gap-1 shadow-sm">
+                              <i className="fa-solid fa-check text-emerald-400"></i>
+                              <span>กำหนดเอง</span>
+                            </div>
+                          )}
+
+                          {/* Floating Crop Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCroppingTrainee(trainee);
+                            }}
+                            className="absolute top-1.5 right-1.5 z-20 px-2 py-0.5 bg-black/80 hover:bg-emerald-600 text-white text-[10px] font-medium rounded-lg backdrop-blur-xs border border-white/20 transition-all flex items-center gap-1 shadow-md cursor-pointer hover:scale-105"
+                            title="คลิกเพื่อเลือกจุดครอบรูปภาพนี้เอง"
+                          >
+                            <i className="fa-solid fa-crop-simple text-amber-300"></i>
+                            <span className="hidden sm:inline">ครอบรูป</span>
+                          </button>
+
+                          {/* Click-to-Crop Overlay Hint on Hover */}
+                          {clickAction === 'crop' && (
+                            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center pointer-events-none">
+                              <span className="px-2.5 py-1 bg-black/85 text-amber-300 text-xs font-bold rounded-xl shadow-lg border border-amber-400/40 flex items-center gap-1.5">
+                                <i className="fa-solid fa-crosshairs"></i>
+                                <span>คลิกเลือกจุดครอบ</span>
                               </span>
                             </div>
                           )}
@@ -1064,7 +1661,13 @@ export default function BonsaiTraineeChart() {
                     {batch.trainees.filter(t => t.role && t.role.includes('ประธาน')).slice(0, 1).map(leader => (
                       <div key={leader.id} className="flex flex-col items-center mb-6">
                         <div
-                          onClick={() => setSelectedTrainee({ ...leader, batch })}
+                          onClick={() => {
+                            if (clickAction === 'crop') {
+                              setCroppingTrainee(leader);
+                            } else {
+                              setSelectedTrainee({ ...leader, batch });
+                            }
+                          }}
                           className={`rounded-2xl p-3 shadow-md flex items-center gap-3 cursor-pointer transition transform hover:scale-103 border ${
                             cardTheme === 'wattvision'
                               ? 'bg-[#1E1E1E] border-[#00E5FF] text-white hover:shadow-lg hover:shadow-[#00E5FF]/20'
@@ -1103,7 +1706,13 @@ export default function BonsaiTraineeChart() {
                       {batch.trainees.map((trainee) => (
                         <div
                           key={trainee.id}
-                          onClick={() => setSelectedTrainee({ ...trainee, batch })}
+                          onClick={() => {
+                            if (clickAction === 'crop') {
+                              setCroppingTrainee(trainee);
+                            } else {
+                              setSelectedTrainee({ ...trainee, batch });
+                            }
+                          }}
                           className={`rounded-xl p-2.5 shadow-xs transition cursor-pointer flex items-center gap-2.5 w-52 transform hover:-translate-y-0.5 border ${
                             cardTheme === 'wattvision'
                               ? 'bg-[#1E1E1E] border-[#2C2C2E] hover:border-[#00E5FF] text-white'
@@ -1261,35 +1870,81 @@ export default function BonsaiTraineeChart() {
             </div>
 
             {/* Modal Footer */}
-            <div className={`px-6 py-3.5 border-t flex justify-end gap-2 ${
+            <div className={`px-6 py-3.5 border-t flex flex-wrap items-center justify-between gap-2 ${
               cardTheme === 'wattvision'
                 ? 'bg-[#191919] border-[#2C2C2E]'
                 : 'bg-gray-50 border-gray-200'
             }`}>
               <button
-                onClick={() => setSelectedTrainee(null)}
-                className={`px-4 py-2 font-semibold text-xs rounded-xl transition cursor-pointer ${
+                onClick={() => {
+                  const t = selectedTrainee;
+                  setSelectedTrainee(null);
+                  setCroppingTrainee(t);
+                }}
+                className={`px-3.5 py-2 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
                   cardTheme === 'wattvision'
-                    ? 'bg-[#252525] hover:bg-[#303030] text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    ? 'bg-[#00E5FF]/20 text-[#00E5FF] hover:bg-[#00E5FF]/30 border border-[#00E5FF]/50'
+                    : 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
                 }`}
+                title="ปรับจุดโฟกัสหรือระยะซูมของรูปนี้"
               >
-                ปิดหน้าต่าง
+                <i className="fa-solid fa-crop-simple"></i> ปรับจุดครอบรูปภาพนี้
               </button>
-              <button
-                onClick={() => window.print()}
-                className={`px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
-                  cardTheme === 'wattvision'
-                    ? 'bg-[#00E5FF] hover:bg-[#33EAFF] text-[#121212]'
-                    : 'bg-emerald-800 hover:bg-emerald-900 text-white'
-                }`}
-              >
-                <i className="fa-solid fa-print"></i> พิมพ์ประวัติ
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedTrainee(null)}
+                  className={`px-4 py-2 font-semibold text-xs rounded-xl transition cursor-pointer ${
+                    cardTheme === 'wattvision'
+                      ? 'bg-[#252525] hover:bg-[#303030] text-gray-300'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  ปิดหน้าต่าง
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  className={`px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer ${
+                    cardTheme === 'wattvision'
+                      ? 'bg-[#00E5FF] hover:bg-[#33EAFF] text-[#121212]'
+                      : 'bg-emerald-800 hover:bg-emerald-900 text-white'
+                  }`}
+                >
+                  <i className="fa-solid fa-print"></i> พิมพ์ประวัติ
+                </button>
+              </div>
             </div>
 
           </div>
         </div>
+      )}
+
+      {/* 5. Interactive Crop Editor Modal */}
+      {croppingTrainee && (
+        <CropEditorModal
+          trainee={croppingTrainee}
+          cardTheme={cardTheme}
+          cardSize={cardSize}
+          currentCrop={
+            customCropMap[croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '')] ||
+            FACE_FOCUS_MAP[croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '')] ||
+            { x: 50, y: 18, scale: 1.85 }
+          }
+          defaultCrop={
+            FACE_FOCUS_MAP[croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '')] ||
+            { x: 50, y: 18, scale: 1.85 }
+          }
+          onSave={(cropData) => {
+            const fname = croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '');
+            handleSaveCustomCrop(fname, cropData);
+            setCroppingTrainee(null);
+          }}
+          onReset={() => {
+            const fname = croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '');
+            handleResetCustomCrop(fname);
+          }}
+          onClose={() => setCroppingTrainee(null)}
+        />
       )}
 
       {/* 5. Footer */}
