@@ -238,7 +238,7 @@ function CropEditorModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-      <div className={`rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
+      <div className={`rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
         cardTheme === 'wattvision'
           ? 'bg-[#181818] border-[#2C2C2E] text-white'
           : cardTheme === 'poster'
@@ -944,7 +944,7 @@ export default function BonsaiTraineeChart() {
           ? 'bg-gradient-to-b from-[#062019] via-[#041712] to-[#020b08] border-emerald-900/80 text-white'
           : 'bg-gradient-to-b from-white via-emerald-50/40 to-white border-emerald-100 text-gray-800'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-9">
+        <div className="max-w-[96%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-9">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             
             {/* Logo & Title */}
@@ -1001,7 +1001,7 @@ export default function BonsaiTraineeChart() {
                     ? 'text-amber-300 drop-shadow'
                     : 'text-emerald-950'
                 }`}>
-                  ทำเนียบผู้ผ่านการอบรมบอนไซ
+                  ทำเนียบผู้อบรมบอนไซ บางกอกบอนไซ
                 </h1>
                 <p className={`text-xs sm:text-sm mt-1 ${
                   cardTheme === 'wattvision' ? 'text-[#98989D]' : cardTheme === 'poster' ? 'text-emerald-200/90' : 'text-gray-600'
@@ -1021,7 +1021,7 @@ export default function BonsaiTraineeChart() {
                   : 'bg-white border-emerald-200'
               }`}>
                 <div className={`text-[11px] font-medium ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'text-gray-400'}`}>
-                  ผู้ผ่านการอบรม
+                  ผู้เข้าอบรม
                 </div>
                 <div className={`text-2xl font-black leading-tight ${
                   cardTheme === 'wattvision' ? 'text-[#00E5FF]' : cardTheme === 'poster' ? 'text-amber-300' : 'text-emerald-800'
@@ -1069,7 +1069,7 @@ export default function BonsaiTraineeChart() {
 
 
       {/* 2. Control & Filter Bar (รวมฟังก์ชันสลับธีม และโหมดครอบหน้า) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+      <section className="max-w-[96%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
         <div className={`rounded-3xl shadow-lg border p-4 sm:p-5 flex flex-col xl:flex-row items-center justify-between gap-4 transition-colors duration-300 ${
           cardTheme === 'wattvision'
             ? 'bg-[#1E1E1E] border-[#2C2C2E] text-white'
@@ -1154,7 +1154,7 @@ export default function BonsaiTraineeChart() {
                 ? 'bg-slate-900 border-emerald-700'
                 : 'bg-stone-100 border-gray-200'
             }`}>
-              <button
+              {/* <button
                 onClick={() => handleCropModeChange('face')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                   cropMode === 'face'
@@ -1169,8 +1169,8 @@ export default function BonsaiTraineeChart() {
               >
                 <i className="fa-solid fa-user-tie"></i>
                 <span>ครอบโซนหน้า</span>
-              </button>
-              <button
+              </button> */}
+              {/* <button
                 onClick={() => handleCropModeChange('full')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
                   cropMode === 'full'
@@ -1186,7 +1186,7 @@ export default function BonsaiTraineeChart() {
                 <i className="fa-solid fa-tree"></i>
                 <span>ภาพเต็ม</span>
               </button>
-            </div>
+            </div> */}
 
             {/* ปุ่มย่อขนาดการ์ด: กะทัดรัด (ย่อสั้น) vs ปกติ */}
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
@@ -1365,7 +1365,7 @@ export default function BonsaiTraineeChart() {
 
 
       {/* 3. Main Content: Trainee Roster by Batch */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-10">
+      <main className="max-w-[96%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-10">
         {filteredBatches.length === 0 ? (
           <div className={`rounded-3xl p-12 text-center border my-8 ${
             cardTheme === 'wattvision'
@@ -1586,7 +1586,7 @@ export default function BonsaiTraineeChart() {
                             title="คลิกเพื่อเลือกจุดครอบรูปภาพนี้เอง"
                           >
                             <i className="fa-solid fa-crop-simple text-amber-300"></i>
-                            <span className="hidden sm:inline">ครอบรูป</span>
+                
                           </button>
 
                           {/* Click-to-Crop Overlay Hint on Hover */}
