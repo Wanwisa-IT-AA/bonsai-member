@@ -2079,9 +2079,49 @@
             provSelect.appendChild(opt);
           });
 
+          this.initRegistrationDates();
           this.updateAuthUI();
           this.fetchMembersFromApi();
           this.navigate("home");
+        },
+
+        // ตั้งค่าเริ่มต้นวันออกบัตรเป็นวันปัจจุบัน และวันหมดอายุอัตโนมัติ 1 ปี
+        initRegistrationDates: function () {
+          const now = new Date();
+          const yyyy = now.getFullYear();
+          const mm = String(now.getMonth() + 1).padStart(2, "0");
+          const dd = String(now.getDate()).padStart(2, "0");
+          const todayStr = `${yyyy}-${mm}-${dd}`;
+
+          const expire = new Date(now);
+          expire.setFullYear(expire.getFullYear() + 1);
+          const expY = expire.getFullYear();
+          const expM = String(expire.getMonth() + 1).padStart(2, "0");
+          const expD = String(expire.getDate()).padStart(2, "0");
+          const expireStr = `${expY}-${expM}-${expD}`;
+
+          const issueInput = document.getElementById("reg-issue-date");
+          const expireInput = document.getElementById("reg-expire-date");
+          if (issueInput) {
+            issueInput.value = todayStr;
+            if (!issueInput.dataset.listenerAttached) {
+              issueInput.dataset.listenerAttached = "true";
+              issueInput.addEventListener("change", (e) => {
+                if (e.target.value) {
+                  const d = new Date(e.target.value);
+                  if (!isNaN(d.getTime())) {
+                    d.setFullYear(d.getFullYear() + 1);
+                    if (expireInput) {
+                      expireInput.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                    }
+                  }
+                }
+              });
+            }
+          }
+          if (expireInput) {
+            expireInput.value = expireStr;
+          }
         },
 
         // ตรวจสอบสถานะการล็อกอินของแอดมิน
@@ -2211,6 +2251,7 @@
           const targetBtn = document.querySelector(`.nav-${viewId}`);
           if (targetBtn) targetBtn.classList.add("active");
 
+          if (viewId === "register") this.initRegistrationDates();
           if (viewId === "members") this.renderMembersTable();
           if (viewId === "admin") this.renderAdminDashboard();
           if (viewId === "all-cards") this.renderAllCards();
@@ -2588,8 +2629,7 @@
               }
               document.getElementById("reg-photo-label").textContent = "";
               document.getElementById("reg-idphoto-label").textContent = "";
-              document.getElementById("reg-issue-date").value = "";
-              document.getElementById("reg-expire-date").value = "";
+              this.initRegistrationDates();
               await this.fetchMembersFromApi();
               this.navigate("members");
             } else {
