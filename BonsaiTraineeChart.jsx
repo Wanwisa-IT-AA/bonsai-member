@@ -11,6 +11,26 @@
 const _React = typeof React !== 'undefined' ? React : (typeof window !== 'undefined' ? window.React : {});
 const { useState, useMemo, useEffect, useCallback, useRef } = _React;
 
+// 🌟 Google Apps Script Web App URL (เชื่อมโยง Google Sheets และ Google Drive)
+const GOOGLE_SCRIPT_URL = 
+  (typeof localStorage !== 'undefined' && localStorage.getItem('BONSAI_API_URL')) ||
+  'https://script.google.com/macros/s/AKfycbyNwpMFNf2Anl_y5uo_Tv-zA3la5bxziW79Cmw2e1goG5g1yn__81bFZQK9wKBzqL-HFQ/exec';
+
+// ฟังก์ชันแปลงลิงก์ Google Drive ให้แสดงผลใน <img> ได้โดยตรง
+function formatDriveImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:') || !url.includes('drive.google.com')) {
+    return url;
+  }
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                url.match(/id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+  }
+  return url;
+}
+
 // ข้อมูลหลักสูตรและการจัดอบรมแต่ละรุ่น
 const INITIAL_BATCH_METADATA = [
   {
@@ -1099,6 +1119,8 @@ export default function BonsaiTraineeChart() {
 
   const [selectedTrainee, setSelectedTrainee] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isSyncingToGoogle, setIsSyncingToGoogle] = useState(false);
+  const [dataSource, setDataSource] = useState('local'); // 'local' | 'google'
   const [lastScanTime, setLastScanTime] = useState(null);
   const [newImageAlert, setNewImageAlert] = useState(null);
 
@@ -1137,7 +1159,7 @@ export default function BonsaiTraineeChart() {
     });
   };
 
-  // บันทึกการแก้ไขข้อมูลผู้ผ่านการอบรม
+  // บันทึกการแก้ไขข้อมูลผู้ผ่านการอบรม (อัปเดต LocalStorage และซิงค์ Google Sheets/Drive ทันที)
   const handleSaveTrainee = (traineeId, updatedData) => {
     setEditedTrainees((prev) => {
       const updated = {
@@ -1153,13 +1175,51 @@ export default function BonsaiTraineeChart() {
       return updated;
     });
 
+    // ส่งข้อมูลไปบันทึกใน Google Sheets และอัปโหลดรูปลง Google Drive เบื้องหลัง
+    try {
+      const foundT = allRawTrainees.find(item => item.id === traineeId) || {};
+      const batchId = foundT.batch ? foundT.batch.id : 1;
+      const crop = customCropMap[foundT.filename] || FACE_FOCUS_MAP[foundT.filename] || { x: 50, y: 18, scale: 1.85 };
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'saveTrainee',
+          id: traineeId,
+          batch: batchId,
+          name: updatedData.name || foundT.name,
+          nickname: updatedData.nickname || foundT.nickname,
+          role: updatedData.role || foundT.role,
+          certNo: updatedData.certNo || foundT.certNo,
+          status: updatedData.status || foundT.status,
+          photoBase64: updatedData.image && updatedData.image.startsWith('data:') ? updatedData.image : undefined,
+          oldPhotoUrl: foundT.image && foundT.image.includes('drive.google.com') ? foundT.image : undefined,
+          cropFocusX: crop.x,
+          cropFocusY: crop.y,
+          cropScale: crop.scale
+        })
+      })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.status === 'success' && resData.photoUrl) {
+          setEditedTrainees(prev => {
+            const up = { ...prev, [traineeId]: { ...(prev[traineeId] || {}), image: formatDriveImageUrl(resData.photoUrl) } };
+            try { localStorage.setItem('bonsai_edited_trainees', JSON.stringify(up)); } catch (e) {}
+            return up;
+          });
+        }
+      })
+      .catch(e => console.warn('Google Sheets background sync notice:', e));
+    } catch (e) {}
+
     setCropToast(`อัปเดตข้อมูลของ ${updatedData.name || traineeId} เรียบร้อยแล้ว`);
     setTimeout(() => setCropToast(null), 4500);
     setEditingTrainee(null);
     setSelectedTrainee(null);
   };
 
-  // ยืนยันการลบผู้ผ่านการอบรม
+  // ยืนยันการลบผู้ผ่านการอบรม (ซ่อนจาก UI และส่งลบใน Google Sheets)
   const handleConfirmDelete = (trainee) => {
     setDeletedTraineeIds((prev) => {
       const updated = [...new Set([...prev, trainee.id])];
@@ -1169,10 +1229,110 @@ export default function BonsaiTraineeChart() {
       return updated;
     });
 
+    // ส่งลบใน Google Sheets เบื้องหลัง
+    try {
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'deleteTrainee',
+          id: trainee.id
+        })
+      }).catch(e => console.warn('Google Sheets delete notice:', e));
+    } catch (e) {}
+
     setCropToast(`ลบ ${trainee.name} เรียบร้อยแล้ว (สามารถกู้คืนได้จากปุ่มถังขยะ)`);
     setTimeout(() => setCropToast(null), 6000);
     setDeletingTrainee(null);
     setSelectedTrainee(null);
+  };
+
+  // ซิงค์นำเข้าข้อมูลผู้เข้าอบรมและรูปภาพทั้งหมดขึ้น Google Drive & Google Sheets ในคราวเดียว
+  const handleSyncAllToGoogle = async () => {
+    if (isSyncingToGoogle) return;
+    setIsSyncingToGoogle(true);
+    setCropToast('☁️ กำลังเตรียมรูปถ่ายและข้อมูลผู้เข้าอบรมเพื่อซิงค์ขึ้น Google Drive & Sheets...');
+
+    try {
+      const allToSync = [];
+      for (const batch of batches) {
+        for (const trainee of batch.trainees) {
+          let base64 = null;
+          // ถ้าเป็นรูปไฟล์ในโฟลเดอร์เครื่อง ให้ fetch และแปลงเป็น Base64
+          if (trainee.image && !trainee.image.includes('drive.google.com')) {
+            try {
+              const res = await fetch(trainee.image);
+              if (res.ok) {
+                const blob = await res.blob();
+                base64 = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.readAsDataURL(blob);
+                });
+              }
+            } catch (err) {}
+          }
+
+          const crop = customCropMap[trainee.filename] || FACE_FOCUS_MAP[trainee.filename] || { x: 50, y: 18, scale: 1.85 };
+
+          allToSync.push({
+            id: trainee.id,
+            batch: batch.id,
+            name: trainee.name,
+            nickname: trainee.nickname,
+            role: trainee.role,
+            certNo: trainee.certNo,
+            status: trainee.status,
+            filename: trainee.filename || `${trainee.id}.jpg`,
+            photoUrl: trainee.image.includes('drive.google.com') ? trainee.image : '',
+            photoBase64: base64,
+            cropFocusX: crop.x,
+            cropFocusY: crop.y,
+            cropScale: crop.scale
+          });
+        }
+      }
+
+      if (allToSync.length === 0) {
+        setCropToast('ไม่พบข้อมูลที่จะซิงค์');
+        setIsSyncingToGoogle(false);
+        return;
+      }
+
+      // ทยอยส่งทีละ 4 คนเพื่อป้องกัน payload ใหญ่เกินไป
+      const chunkSize = 4;
+      let totalSuccess = 0;
+
+      for (let i = 0; i < allToSync.length; i += chunkSize) {
+        const chunk = allToSync.slice(i, i + chunkSize);
+        setCropToast(`☁️ กำลังอัปโหลดรูปภาพลง Google Drive และบันทึกลง Google Sheets (${i + 1}/${allToSync.length} คน)...`);
+
+        const res = await fetch(GOOGLE_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'syncAllTrainees',
+            trainees: chunk
+          })
+        });
+
+        const resData = await res.json();
+        if (resData.status === 'success') {
+          totalSuccess += chunk.length;
+        }
+      }
+
+      setDataSource('google');
+      setCropToast(`🎉 ซิงค์ข้อมูล ${totalSuccess} ท่านเข้า Google Sheets และ Google Drive สำเร็จเรียบร้อย!`);
+      setTimeout(() => setCropToast(null), 6000);
+      scanFolderImages(true);
+    } catch (err) {
+      console.error('Sync to Google failed:', err);
+      setCropToast(`❌ เกิดข้อผิดพลาดในการซิงค์: ${err.message}`);
+      setTimeout(() => setCropToast(null), 6000);
+    } finally {
+      setIsSyncingToGoogle(false);
+    }
   };
 
   // กู้คืนรายชื่อที่เคยลบ
@@ -1245,6 +1405,48 @@ export default function BonsaiTraineeChart() {
     if (isManual) setIsScanning(true);
 
     try {
+      // 1. ลองดึงข้อมูลจาก Google Sheets ก่อนเป็นอันดับแรก (ถ้ามีการจัดเก็บข้อมูลในชีต Trainees)
+      try {
+        const gsRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=getTrainees&_t=${Date.now()}`);
+        if (gsRes.ok) {
+          const gsData = await gsRes.json();
+          // ตรวจสอบว่าเป็นข้อมูลผู้เข้าอบรมจริง (มีฟิลด์ batch) ไม่ใช่รายชื่อสมาชิกทั่วไป
+          if (Array.isArray(gsData) && gsData.length > 0 && gsData.some(t => t.batch !== undefined)) {
+            const updatedBatches = INITIAL_BATCH_METADATA.map((batch) => {
+              const traineesInBatch = gsData
+                .filter((t) => Number(t.batch) === batch.id)
+                .map((t, index) => {
+                  const fname = t.photoUrl ? t.photoUrl.split('/').pop() : `${t.id}.jpg`;
+                  return {
+                    id: t.id || `BKK-0${batch.id}-${String(index + 1).padStart(2, '0')}`,
+                    name: t.name,
+                    nickname: t.nickname,
+                    role: t.role || (index === 0 ? `ประธานรุ่นที่ ${batch.id}` : 'สมาชิก'),
+                    filename: fname,
+                    image: formatDriveImageUrl(t.photoUrl) || `bangkokimage/${batch.folderNum}/trainee_01.jpg`,
+                    treeSpecies: 'บอนไซศิลปะสร้างสรรค์',
+                    status: t.status || 'จบหลักสูตร',
+                    certNo: t.certNo || `TBA-CERT-2026-0${batch.id}${String(index + 1).padStart(2, '0')}`,
+                    highlight: 'ผ่านการฝึกอบรมศิลปะการปลูกและสร้างสรรค์บอนไซ'
+                  };
+                });
+
+              return {
+                ...batch,
+                trainees: traineesInBatch
+              };
+            });
+
+            setBatches(updatedBatches);
+            setDataSource('google');
+            setLastScanTime(new Date());
+            return;
+          }
+        }
+      } catch (err) {}
+
+      // 2. หากยังไม่มีข้อมูลใน Google Sheets ให้สแกนจากโฟลเดอร์ภาพในเครื่อง
+      setDataSource('local');
       const manifestUrl = `bangkokimage/manifest.json?_t=${Date.now()}`;
       let manifestData = null;
 
@@ -1511,6 +1713,18 @@ export default function BonsaiTraineeChart() {
                     </span>
                     Live Sync • แถวละ 5 คน
                   </span>
+
+                  {/* Google Sheets & Drive Source Badge */}
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full border ${
+                    dataSource === 'google'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300'
+                      : cardTheme === 'wattvision'
+                      ? 'bg-[#141414] text-[#00E5FF] border-[#2C2C2E]'
+                      : 'bg-sky-50 text-sky-700 border-sky-200'
+                  }`}>
+                    <i className={`fa-solid ${dataSource === 'google' ? 'fa-cloud text-emerald-500' : 'fa-folder-open text-sky-500'}`}></i>
+                    <span>{dataSource === 'google' ? 'Google Sheets & Drive' : 'โฟลเดอร์ภาพในเครื่อง'}</span>
+                  </span>
                 </div>
 
                 <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${
@@ -1552,7 +1766,7 @@ export default function BonsaiTraineeChart() {
               {/* Refresh Button */}
               <button
                 onClick={() => scanFolderImages(true)}
-                disabled={isScanning}
+                disabled={isScanning || isSyncingToGoogle}
                 className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50 border ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#1E1E1E] hover:bg-[#252525] text-[#00E5FF] border-[#2C2C2E] hover:border-[#00E5FF]'
@@ -1560,10 +1774,29 @@ export default function BonsaiTraineeChart() {
                     ? 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-emerald-700'
                     : 'bg-white hover:bg-emerald-50 text-emerald-800 border-emerald-300'
                 }`}
-                title="คลิกเพื่อสแกนรูปภาพในโฟลเดอร์ใหม่อีกครั้ง"
+                title="คลิกเพื่อสแกนรูปภาพใหม่อีกครั้ง"
               >
                 <i className={`fa-solid fa-arrows-rotate ${isScanning ? 'fa-spin' : ''}`}></i>
-                <span>{isScanning ? 'กำลังสแกน...' : 'รีเฟรชรูปภาพ'}</span>
+                <span>{isScanning ? 'กำลังสแกน...' : 'รีเฟรช'}</span>
+              </button>
+
+              {/* Google Sheets & Drive Sync Button */}
+              <button
+                onClick={handleSyncAllToGoogle}
+                disabled={isSyncingToGoogle}
+                className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50 border ${
+                  isSyncingToGoogle
+                    ? 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse'
+                    : cardTheme === 'wattvision'
+                    ? 'bg-[#1E1E1E] hover:bg-[#252525] text-[#00E5FF] border-[#2C2C2E] hover:border-[#00E5FF]'
+                    : cardTheme === 'poster'
+                    ? 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-emerald-700'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300'
+                }`}
+                title="คลิกเพื่ออัปโหลดรูปภาพทั้งหมดเข้า Google Drive และบันทึกข้อมูลลง Google Sheets อัตโนมัติ"
+              >
+                <i className={`fa-solid ${isSyncingToGoogle ? 'fa-spinner fa-spin text-amber-500' : 'fa-cloud-arrow-up text-emerald-600'}`}></i>
+                <span>{isSyncingToGoogle ? 'กำลังซิงค์...' : 'ซิงค์เข้า Drive & Sheets'}</span>
               </button>
 
               <button
@@ -2080,9 +2313,9 @@ export default function BonsaiTraineeChart() {
                           )}
 
                           <img
-                            src={trainee.image}
+                            src={formatDriveImageUrl(trainee.image)}
                             alt={trainee.name}
-                            style={getImageStyle(trainee.filename || trainee.image.split('/').pop())}
+                            style={getImageStyle(trainee.filename || (trainee.image ? trainee.image.split('/').pop() : ''))}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.target.onerror = null;
@@ -2373,9 +2606,9 @@ export default function BonsaiTraineeChart() {
                   cardTheme === 'wattvision' ? 'border-[#00E5FF] bg-[#141414]' : 'border-emerald-600 bg-stone-100'
                 }`}>
                   <img
-                    src={selectedTrainee.image}
+                    src={formatDriveImageUrl(selectedTrainee.image)}
                     alt={selectedTrainee.name}
-                    style={getImageStyle(selectedTrainee.filename || selectedTrainee.image.split('/').pop())}
+                    style={getImageStyle(selectedTrainee.filename || (selectedTrainee.image ? selectedTrainee.image.split('/').pop() : ''))}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.src = 'sample-member.jpg'; }}
                   />

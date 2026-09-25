@@ -24,6 +24,14 @@ function getTargetSheet() {
 // -------------------------------------------------------------
 function doGet(e) {
   try {
+    const action = (e && e.parameter && e.parameter.action) || "";
+    const type = (e && e.parameter && e.parameter.type) || "";
+
+    // ดึงข้อมูลผู้ผ่านการอบรม (Trainees) จาก Google Sheets
+    if (action === "getTrainees" || type === "trainees") {
+      return handleGetTrainees();
+    }
+
     const sheet = getTargetSheet();
     const dataRange = sheet.getDataRange();
     const values = dataRange.getValues();
@@ -99,6 +107,12 @@ function doPost(e) {
       return handleRegister(sheet, data);
     } else if (action === "updatePhoto") {
       return handleUpdatePhoto(sheet, data);
+    } else if (action === "saveTrainee") {
+      return handleSaveTrainee(data);
+    } else if (action === "deleteTrainee") {
+      return handleDeleteTrainee(data);
+    } else if (action === "syncAllTrainees" || action === "batchSaveTrainees") {
+      return handleBatchSaveTrainees(data);
     } else {
       return responseJSON({ status: "error", message: "Unknown action: " + action });
     }
@@ -375,3 +389,299 @@ function deleteDriveFileByUrl(fileUrl) {
     console.warn("Delete old photo error:", e.message);
   }
 }
+
+// =============================================================
+// ระบบผู้ผ่านการอบรมบอนไซ (Bonsai Trainees System)
+// จัดเก็บข้อมูลใน Google Sheets (แท็บ "Trainees")
+// และบันทึกรูปถ่ายในโฟลเดอร์ Google Drive "Bonsai_Trainees_Photos"
+// =============================================================
+
+const TRAINEES_SHEET_NAME = "Trainees";
+const TRAINEES_DRIVE_FOLDER_NAME = "Bonsai_Trainees_Photos";
+
+/**
+ * ดึงหรือสร้างแผ่นงาน "Trainees" ใน Google Sheets อัตโนมัติ
+ */
+function getTraineesSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(TRAINEES_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TRAINEES_SHEET_NAME);
+    // สร้างหัวตาราง (Header)
+    const headers = [
+      "id",
+      "batch",
+      "name",
+      "nickname",
+      "role",
+      "certNo",
+      "status",
+      "photoUrl",
+      "cropFocusX",
+      "cropFocusY",
+      "cropScale",
+      "updatedAt"
+    ];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setFontWeight("bold")
+      .setBackground("#0f5132")
+      .setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * ดึงหรือสร้างโฟลเดอร์สำหรับเก็บรูปถ่ายผู้เข้าอบรมใน Google Drive
+ */
+function getOrCreateTraineesFolder() {
+  const folders = DriveApp.getFoldersByName(TRAINEES_DRIVE_FOLDER_NAME);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  const folder = DriveApp.createFolder(TRAINEES_DRIVE_FOLDER_NAME);
+  folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return folder;
+}
+
+/**
+ * อัปโหลดรูปภาพ Base64 เข้าโฟลเดอร์ผู้เข้าอบรมใน Google Drive
+ */
+function uploadTraineePhotoToDrive(base64String, fileName) {
+  try {
+    const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    let contentType = "image/jpeg";
+    let bytes;
+
+    if (matches && matches.length === 3) {
+      contentType = matches[1];
+      bytes = Utilities.base64Decode(matches[2]);
+    } else {
+      bytes = Utilities.base64Decode(base64String);
+    }
+
+    const blob = Utilities.newBlob(bytes, contentType, fileName);
+    const folder = getOrCreateTraineesFolder();
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return file.getUrl();
+  } catch (e) {
+    console.error("uploadTraineePhotoToDrive error:", e.message);
+    return "";
+  }
+}
+
+/**
+ * ดึงข้อมูลผู้ผ่านการอบรมทั้งหมดจาก Google Sheets ส่งกลับเป็น JSON
+ */
+function handleGetTrainees() {
+  try {
+    const sheet = getTraineesSheet();
+    const values = sheet.getDataRange().getValues();
+
+    if (values.length <= 1) {
+      return responseJSON([]);
+    }
+
+    const trainees = [];
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const id = String(row[0] || "").trim();
+      if (!id) continue;
+
+      trainees.push({
+        id: id,
+        batch: Number(row[1]) || 1,
+        name: String(row[2] || ""),
+        nickname: String(row[3] || ""),
+        role: String(row[4] || "สมาชิก"),
+        certNo: String(row[5] || ""),
+        status: String(row[6] || "จบหลักสูตร"),
+        photoUrl: String(row[7] || ""),
+        cropFocusX: row[8] !== "" && row[8] != null ? Number(row[8]) : 50,
+        cropFocusY: row[9] !== "" && row[9] != null ? Number(row[9]) : 18,
+        cropScale: row[10] !== "" && row[10] != null ? Number(row[10]) : 1.85,
+        updatedAt: String(row[11] || "")
+      });
+    }
+
+    return responseJSON(trainees);
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.message });
+  }
+}
+
+/**
+ * บันทึกหรือแก้ไขข้อมูลผู้เข้าอบรม 1 คน (พร้อมอัปโหลดรูปลง Google Drive)
+ */
+function handleSaveTrainee(data) {
+  try {
+    const sheet = getTraineesSheet();
+    const targetId = String(data.id || "").trim();
+    if (!targetId) {
+      return responseJSON({ status: "error", message: "กรุณาระบุรหัสผู้เข้าอบรม (id)" });
+    }
+
+    let photoUrl = data.photoUrl || "";
+    // ถ้ามีไฟล์รูป Base64 ส่งมา ให้อัปโหลดเข้า Google Drive
+    if (data.photoBase64) {
+      if (data.oldPhotoUrl) {
+        deleteDriveFileByUrl(data.oldPhotoUrl);
+      }
+      const fileName = "trainee_" + targetId + "_" + new Date().getTime() + ".jpg";
+      photoUrl = uploadTraineePhotoToDrive(data.photoBase64, fileName);
+    }
+
+    const values = sheet.getDataRange().getValues();
+    let foundRow = -1;
+
+    for (let i = 1; i < values.length; i++) {
+      const rowId = String(values[i][0] || "").trim();
+      if (rowId === targetId) {
+        foundRow = i + 1;
+        break;
+      }
+    }
+
+    const cropX = data.cropFocusX != null ? data.cropFocusX : (data.crop ? data.crop.x : 50);
+    const cropY = data.cropFocusY != null ? data.cropFocusY : (data.crop ? data.crop.y : 18);
+    const cropScale = data.cropScale != null ? data.cropScale : (data.crop ? data.crop.scale : 1.85);
+
+    const rowData = [
+      targetId,
+      Number(data.batch || 1),
+      data.name || "",
+      data.nickname || "",
+      data.role || "สมาชิก",
+      data.certNo || "",
+      data.status || "จบหลักสูตร",
+      photoUrl,
+      cropX,
+      cropY,
+      cropScale,
+      new Date().toLocaleString("th-TH")
+    ];
+
+    if (foundRow !== -1) {
+      sheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+
+    return responseJSON({
+      status: "success",
+      message: "บันทึกข้อมูลผู้เข้าอบรมเข้า Google Sheets และ Drive เรียบร้อย",
+      id: targetId,
+      photoUrl: photoUrl
+    });
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.message });
+  }
+}
+
+/**
+ * ลบผู้เข้าอบรมออกจาก Google Sheets
+ */
+function handleDeleteTrainee(data) {
+  try {
+    const sheet = getTraineesSheet();
+    const targetId = String(data.id || "").trim();
+    if (!targetId) {
+      return responseJSON({ status: "error", message: "กรุณาระบุรหัสผู้เข้าอบรม (id)" });
+    }
+
+    const values = sheet.getDataRange().getValues();
+    let deleted = false;
+
+    for (let i = values.length - 1; i >= 1; i--) {
+      const rowId = String(values[i][0] || "").trim();
+      if (rowId === targetId) {
+        // ลบไฟล์รูปใน Drive ถ้าต้องการ
+        const photoUrl = values[i][7];
+        if (photoUrl) {
+          deleteDriveFileByUrl(photoUrl);
+        }
+        sheet.deleteRow(i + 1);
+        deleted = true;
+      }
+    }
+
+    return responseJSON({
+      status: deleted ? "success" : "not_found",
+      message: deleted ? "ลบผู้เข้าอบรม " + targetId + " ออกจาก Google Sheets เรียบร้อย" : "ไม่พบรหัสผู้เข้าอบรมในระบบ"
+    });
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.message });
+  }
+}
+
+/**
+ * ซิงค์นำเข้าข้อมูลผู้เข้าอบรมทั้งหมดเป็นชุด (Batch Sync) พร้อมอัปโหลดรูปลง Google Drive
+ */
+function handleBatchSaveTrainees(data) {
+  try {
+    const sheet = getTraineesSheet();
+    const traineesList = data.trainees || [];
+    let savedCount = 0;
+
+    // ถ้าสั่งเคลียร์ก่อนนำเข้า
+    if (data.clearExisting) {
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        sheet.deleteRows(2, lastRow - 1);
+      }
+    }
+
+    const currentValues = sheet.getDataRange().getValues();
+    const existingIds = new Map();
+    for (let i = 1; i < currentValues.length; i++) {
+      existingIds.set(String(currentValues[i][0]).trim(), i + 1);
+    }
+
+    traineesList.forEach(item => {
+      let photoUrl = item.photoUrl || "";
+      if (item.photoBase64) {
+        const fileName = "trainee_" + (item.id || "batch") + "_" + (item.filename || new Date().getTime() + ".jpg");
+        photoUrl = uploadTraineePhotoToDrive(item.photoBase64, fileName);
+      }
+
+      const cropX = item.cropFocusX != null ? item.cropFocusX : (item.crop ? item.crop.x : 50);
+      const cropY = item.cropFocusY != null ? item.cropFocusY : (item.crop ? item.crop.y : 18);
+      const cropScale = item.cropScale != null ? item.cropScale : (item.crop ? item.crop.scale : 1.85);
+
+      const rowData = [
+        String(item.id || "").trim(),
+        Number(item.batch || 1),
+        String(item.name || ""),
+        String(item.nickname || ""),
+        String(item.role || "สมาชิก"),
+        String(item.certNo || ""),
+        String(item.status || "จบหลักสูตร"),
+        photoUrl,
+        cropX,
+        cropY,
+        cropScale,
+        new Date().toLocaleString("th-TH")
+      ];
+
+      const existingRow = existingIds.get(String(item.id).trim());
+      if (existingRow) {
+        sheet.getRange(existingRow, 1, 1, rowData.length).setValues([rowData]);
+      } else {
+        sheet.appendRow(rowData);
+        existingIds.set(String(item.id).trim(), sheet.getLastRow());
+      }
+      savedCount++;
+    });
+
+    return responseJSON({
+      status: "success",
+      message: "ซิงค์ข้อมูลผู้เข้าอบรม " + savedCount + " คนเข้า Google Sheets และ Drive เรียบร้อยแล้ว",
+      count: savedCount
+    });
+  } catch (err) {
+    return responseJSON({ status: "error", message: err.message });
+  }
+}
+
