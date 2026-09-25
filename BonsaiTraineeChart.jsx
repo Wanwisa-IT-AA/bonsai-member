@@ -1512,7 +1512,7 @@ function DeletedListModal({
   );
 }
 
-export default function BonsaiTraineeChart() {
+function BonsaiTraineeChart() {
   const [selectedBatchId, setSelectedBatchId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'org'
@@ -3450,4 +3450,12 @@ export default function BonsaiTraineeChart() {
 
     </div>
   );
+}
+
+// Global window and Module Export
+if (typeof window !== 'undefined') {
+  window.BonsaiTraineeChart = BonsaiTraineeChart;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = BonsaiTraineeChart;
 }
