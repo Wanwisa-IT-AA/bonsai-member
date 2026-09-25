@@ -138,6 +138,7 @@ export default function BonsaiTraineeChart() {
   const [selectedBatchId, setSelectedBatchId] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'org'
+  const [cardTheme, setCardTheme] = useState('poster'); // 'poster' (ตามแบบรูปภาพตัวอย่าง) | 'light'
   const [selectedTrainee, setSelectedTrainee] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [lastScanTime, setLastScanTime] = useState(null);
@@ -454,30 +455,61 @@ export default function BonsaiTraineeChart() {
               )}
             </div>
 
-            {/* View Mode Toggle */}
-            <div className="bg-stone-100 p-1 rounded-2xl flex items-center border border-gray-200 shrink-0">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                  viewMode === 'cards'
-                    ? 'bg-white text-emerald-900 shadow-2xs font-bold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                title="มุมมองการ์ดภาพ"
-              >
-                <i className="fa-solid fa-grip"></i> การ์ด
-              </button>
-              <button
-                onClick={() => setViewMode('org')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                  viewMode === 'org'
-                    ? 'bg-white text-emerald-900 shadow-2xs font-bold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                title="มุมมองแผนผังผังงาน"
-              >
-                <i className="fa-solid fa-sitemap"></i> แผนผัง
-              </button>
+            {/* Style & View Mode Toggles */}
+            <div className="flex items-center gap-2 shrink-0">
+              
+              {/* Theme Toggle: โปสเตอร์สัมมนา (ตามแบบ) vs สว่าง */}
+              <div className="bg-stone-100 p-1 rounded-2xl flex items-center border border-gray-200">
+                <button
+                  onClick={() => setCardTheme('poster')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    cardTheme === 'poster'
+                      ? 'bg-slate-900 text-amber-300 shadow-2xs font-bold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="สไตล์โปสเตอร์สัมมนา แถวละ 5 คน (ตามแบบตัวอย่าง)"
+                >
+                  <i className="fa-solid fa-award text-amber-400"></i> สไตล์โปสเตอร์
+                </button>
+                <button
+                  onClick={() => setCardTheme('light')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    cardTheme === 'light'
+                      ? 'bg-white text-emerald-900 shadow-2xs font-bold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="สไตล์สว่าง มินิมอล แถวละ 5 คน"
+                >
+                  <i className="fa-solid fa-sun text-emerald-600"></i> สไตล์สว่าง
+                </button>
+              </div>
+
+              {/* View Mode Toggle: การ์ด vs แผนผัง */}
+              <div className="bg-stone-100 p-1 rounded-2xl flex items-center border border-gray-200">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === 'cards'
+                      ? 'bg-white text-emerald-900 shadow-2xs font-bold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="มุมมองการ์ดภาพ แถวละ 5 คน"
+                >
+                  <i className="fa-solid fa-grip"></i> การ์ด
+                </button>
+                <button
+                  onClick={() => setViewMode('org')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    viewMode === 'org'
+                      ? 'bg-white text-emerald-900 shadow-2xs font-bold'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  title="มุมมองแผนผังผังงาน"
+                >
+                  <i className="fa-solid fa-sitemap"></i> แผนผัง
+                </button>
+              </div>
+
             </div>
 
           </div>
@@ -509,47 +541,61 @@ export default function BonsaiTraineeChart() {
           filteredBatches.map((batch) => (
             <section
               key={batch.id}
-              className="bg-white rounded-3xl shadow-sm border border-emerald-100/90 overflow-hidden transition-all hover:shadow-md"
+              className={`rounded-3xl shadow-md border overflow-hidden transition-all hover:shadow-xl ${
+                cardTheme === 'poster'
+                  ? 'bg-gradient-to-b from-[#061e18] via-[#041612] to-[#020b08] border-emerald-700/60 text-white'
+                  : 'bg-white border-emerald-100 text-gray-800'
+              }`}
             >
-              {/* Batch Banner Header - สว่าง สบายตา */}
-              <div className="px-6 sm:px-8 py-5 bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/50 border-b border-emerald-100 text-gray-800">
+              {/* Batch Banner Header */}
+              <div
+                className={`px-6 sm:px-8 py-5 border-b ${
+                  cardTheme === 'poster'
+                    ? 'bg-gradient-to-r from-[#062019] via-[#092b23] to-[#041712] border-emerald-800/80 text-white'
+                    : 'bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/50 border-emerald-100 text-gray-800'
+                }`}
+              >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   
                   <div>
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                      <span className="px-3 py-1 bg-emerald-700 text-white font-bold text-xs rounded-full shadow-2xs">
+                      <span className="px-3 py-1 bg-emerald-600 text-white font-bold text-xs rounded-full shadow-2xs">
                         {batch.batchNumber}
                       </span>
-                      <span className="text-xs text-emerald-800 font-mono font-semibold">
+                      <span className={`text-xs font-mono font-semibold ${cardTheme === 'poster' ? 'text-amber-300' : 'text-emerald-800'}`}>
                         [{batch.batchCode}]
                       </span>
-                      <span className="text-xs text-gray-500">
-                        • โฟลเดอร์: <code className="bg-emerald-100/70 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-mono">{batch.folder}/</code>
+                      <span className={`text-xs ${cardTheme === 'poster' ? 'text-emerald-200/80' : 'text-gray-500'}`}>
+                        • โฟลเดอร์: <code className={`px-2 py-0.5 rounded text-[11px] font-mono ${cardTheme === 'poster' ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-emerald-100/70 text-emerald-800'}`}>{batch.folder}/</code>
                       </span>
-                      <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        ดึงรูปอัตโนมัติ ({batch.trainees.length} รูป)
+                      <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${cardTheme === 'poster' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-700/60' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                        แถวละ 5 ท่าน ({batch.trainees.length} รูป)
                       </span>
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-950">
+                    <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${cardTheme === 'poster' ? 'text-amber-300 drop-shadow-xs' : 'text-emerald-950'}`}>
                       {batch.title}
                     </h2>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-1 max-w-2xl">
+                    <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${cardTheme === 'poster' ? 'text-emerald-100/90' : 'text-gray-600'}`}>
                       {batch.description}
                     </p>
                   </div>
 
                   {/* Batch Details (Date, Location, Instructor) */}
-                  <div className="bg-white border border-emerald-200/80 rounded-2xl p-3 text-xs space-y-1 md:min-w-[270px] shadow-2xs">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <i className="fa-solid fa-calendar-days text-emerald-600 w-4 text-center"></i>
+                  <div className={`rounded-2xl p-3 text-xs space-y-1 md:min-w-[270px] shadow-2xs border ${
+                    cardTheme === 'poster'
+                      ? 'bg-slate-950/70 border-emerald-600/40 text-emerald-200'
+                      : 'bg-white border-emerald-200/80 text-gray-700'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-calendar-days text-amber-400 w-4 text-center"></i>
                       <span>{batch.date}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <i className="fa-solid fa-location-dot text-emerald-600 w-4 text-center"></i>
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-location-dot text-amber-400 w-4 text-center"></i>
                       <span>{batch.location}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <i className="fa-solid fa-chalkboard-user text-emerald-600 w-4 text-center"></i>
+                    <div className="flex items-center gap-2">
+                      <i className="fa-solid fa-chalkboard-user text-amber-400 w-4 text-center"></i>
                       <span className="truncate">วิทยากร: {batch.instructor}</span>
                     </div>
                   </div>
@@ -557,36 +603,69 @@ export default function BonsaiTraineeChart() {
                 </div>
               </div>
 
-              {/* View 1: Cards View - สะอาดตา สบายตา เอาคำบรรยายออก เหลือแต่ชื่อจริง และชื่อเล่น */}
+              {/* View 1: Cards View - สไตล์โปสเตอร์สัมมนา แถวละ 5 คน (ตามแบบตัวอย่าง) */}
               {viewMode === 'cards' ? (
-                <div className="p-6 sm:p-8">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                <div className={`p-6 sm:p-8 ${cardTheme === 'poster' ? 'bg-gradient-to-b from-[#051813] via-[#030e0c] to-[#020907]' : 'bg-white'}`}>
+                  {/* Grid 5 Columns แถวละ 5 คนอย่างสมบูรณ์แบบบน Desktop / Tablet */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
                     {batch.trainees.map((trainee) => (
                       <div
                         key={trainee.id}
                         onClick={() => setSelectedTrainee({ ...trainee, batch })}
-                        className="group bg-white hover:bg-emerald-50/30 rounded-2xl border border-gray-200/90 hover:border-emerald-400 overflow-hidden shadow-2xs hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between transform hover:-translate-y-1"
+                        className={`group relative rounded-t-[2.2rem] rounded-b-2xl border overflow-hidden transition-all duration-300 cursor-pointer flex flex-col justify-between transform hover:-translate-y-2 ${
+                          cardTheme === 'poster'
+                            ? 'bg-gradient-to-b from-slate-900 via-[#071f19] to-slate-950 border-emerald-500/30 hover:border-amber-400 shadow-lg hover:shadow-2xl hover:shadow-amber-500/10'
+                            : 'bg-white hover:bg-emerald-50/30 border-gray-200 hover:border-emerald-400 shadow-2xs hover:shadow-md'
+                        }`}
                       >
-                        {/* Trainee Card Top Photo (Clear, Natural, Bright 3:4) */}
-                        <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
+                        {/* Trainee Card Top Photo (Arched Window + Spotlight Gradient สไตล์ภาพตัวอย่าง) */}
+                        <div className={`relative aspect-[3/4] overflow-hidden rounded-t-[2.2rem] ${
+                          cardTheme === 'poster'
+                            ? 'bg-gradient-to-b from-[#0d3429] via-[#08201a] to-slate-950'
+                            : 'bg-stone-100'
+                        }`}>
+                          {/* Radial Spotlight Effect behind person (เหมือนแสงไฟสปอตไลต์ในรูปตัวอย่าง) */}
+                          {cardTheme === 'poster' && (
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(16,185,129,0.38)_0%,transparent_75%)] pointer-events-none"></div>
+                          )}
+
                           <img
                             src={trainee.image}
                             alt={trainee.name}
-                            className="w-full h-full object-cover object-top transition duration-500 group-hover:scale-104"
+                            className="w-full h-full object-cover object-top transition duration-500 group-hover:scale-105"
                             onError={(e) => {
-                              // Fallback รูปภาพหากไฟล์ยังไม่เสร็จสิ้น
                               e.target.onerror = null;
                               e.target.src = 'sample-member.jpg';
                             }}
                           />
+
+                          {/* Bottom Vignette Shadow */}
+                          {cardTheme === 'poster' && (
+                            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent"></div>
+                          )}
                         </div>
 
-                        {/* Trainee Details Bottom: เฉพาะชื่อจริง และชื่อเล่น ตามที่ผู้ใช้ระบุ */}
-                        <div className="p-3 text-center bg-white border-t border-gray-100 flex flex-col justify-center min-h-[64px]">
-                          <div className="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition leading-snug truncate">
+                        {/* Trainee Details Bottom: เฉพาะชื่อจริง (สีทอง) และชื่อเล่น ตามแบบโปสเตอร์สัมมนา */}
+                        <div className={`p-3 text-center border-t flex flex-col justify-center min-h-[68px] ${
+                          cardTheme === 'poster'
+                            ? 'bg-slate-950/95 border-emerald-900/60'
+                            : 'bg-white border-gray-100'
+                        }`}>
+                          {/* ชื่อจริง: ตัวหนังสือสีทองโดดเด่น ตามแบบภาพสัมมนา */}
+                          <div className={`text-sm sm:text-base font-bold transition leading-tight truncate ${
+                            cardTheme === 'poster'
+                              ? 'text-amber-300 group-hover:text-amber-200 drop-shadow-xs'
+                              : 'text-gray-900 group-hover:text-emerald-700'
+                          }`}>
                             {trainee.name}
                           </div>
-                          <div className="text-xs text-emerald-700 font-medium mt-0.5 truncate">
+                          
+                          {/* ชื่อเล่น: สีเขียวมิ้นต์อ่อน สบายตา */}
+                          <div className={`text-xs sm:text-sm font-medium mt-1 truncate ${
+                            cardTheme === 'poster'
+                              ? 'text-emerald-300/90'
+                              : 'text-emerald-700'
+                          }`}>
                             ({trainee.nickname})
                           </div>
                         </div>
@@ -661,13 +740,17 @@ export default function BonsaiTraineeChart() {
               )}
 
               {/* Batch Footer Summary */}
-              <div className="px-6 py-3 bg-stone-50/70 border-t border-emerald-100 text-xs text-gray-500 flex flex-wrap items-center justify-between gap-2">
+              <div className={`px-6 py-3 border-t text-xs flex flex-wrap items-center justify-between gap-2 ${
+                cardTheme === 'poster'
+                  ? 'bg-[#020b08] border-emerald-900/60 text-emerald-300'
+                  : 'bg-stone-50/70 border-emerald-100 text-gray-500'
+              }`}>
                 <div className="flex items-center gap-2">
-                  <i className="fa-solid fa-folder-open text-emerald-600"></i>
-                  <span>ตำแหน่งโฟลเดอร์: <code className="font-semibold text-gray-700">{batch.folder}/</code></span>
-                  <span className="text-emerald-700 font-medium">• เรนเดอร์รูปภาพอัตโนมัติ</span>
+                  <i className="fa-solid fa-folder-open text-emerald-500"></i>
+                  <span>ตำแหน่งโฟลเดอร์: <code className={`font-semibold ${cardTheme === 'poster' ? 'text-amber-300' : 'text-gray-700'}`}>{batch.folder}/</code></span>
+                  <span className={`${cardTheme === 'poster' ? 'text-emerald-400' : 'text-emerald-700'} font-medium`}>• จัดแสดงแถวละ 5 ท่าน (Keynote Style)</span>
                 </div>
-                <div className="font-semibold text-emerald-900">
+                <div className={`font-bold ${cardTheme === 'poster' ? 'text-amber-300' : 'text-emerald-900'}`}>
                   รวมผู้เข้าร่วมอบรม {batch.trainees.length} ท่าน
                 </div>
               </div>
