@@ -31,9 +31,252 @@ function formatDriveImageUrl(url) {
   return url;
 }
 
+/**
+ * ฟังก์ชันแปลงไฟล์เป็น Base64 Data URL (แบบเดียวกับบัตรสมาชิก)
+ */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
+/**
+ * ตัวช่วยโหลดสคริปต์ MediaPipe Face Detection อัตโนมัติ (On-Demand Loader)
+ */
+let _mediaPipeScriptLoading = null;
+function loadMediaPipeScript() {
+  if (typeof FaceDetection !== 'undefined') {
+    return Promise.resolve();
+  }
+  if (_mediaPipeScriptLoading) return _mediaPipeScriptLoading;
+  _mediaPipeScriptLoading = new Promise((resolve, reject) => {
+    if (typeof document === 'undefined') return reject(new Error('No document'));
+    const existing = document.querySelector('script[src*="face_detection"]');
+    if (existing) {
+      if (typeof FaceDetection !== 'undefined') return resolve();
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', (err) => reject(err));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js';
+    script.crossOrigin = 'anonymous';
+    script.onload = () => resolve();
+    script.onerror = (err) => reject(err);
+    document.head.appendChild(script);
+  });
+  return _mediaPipeScriptLoading;
+}
+
+/**
+ * ตัวช่วยเริ่มการทำงาน MediaPipe Face Detection Engine (แบบเดียวกับบัตรสมาชิก)
+ */
+let _globalFaceDetector = null;
+async function initFaceDetector() {
+  if (_globalFaceDetector) return _globalFaceDetector;
+  if (typeof FaceDetection === 'undefined') {
+    await loadMediaPipeScript().catch(() => null);
+  }
+  if (typeof FaceDetection === 'undefined') return null;
+  try {
+    _globalFaceDetector = new FaceDetection({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/${file}`,
+    });
+    _globalFaceDetector.setOptions({
+      model: 'short',
+      minDetectionConfidence: 0.5,
+    });
+    return _globalFaceDetector;
+  } catch (e) {
+    console.warn('MediaPipe initialization error:', e);
+    return null;
+  }
+}
+
+/**
+ * ฟังก์ชันครอบรูปภาพเฉพาะใบหน้าด้วย AI MediaPipe Face Detection (ดึงวิธีการทำงานของบัตรสมาชิกมาใช้ 100%)
+ * สัดส่วน 3:4 (450 x 600 px) คุณภาพสูง จัดระยะเหนือศีรษะ 44% ให้ความสมดุลสวยงาม
+ */
+async function cropFaceWithMediaPipe(fileOrBase64) {
+  return new Promise(async (resolve) => {
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      if (typeof fileOrBase64 === 'string') {
+        img.src = fileOrBase64;
+      } else {
+        img.src = await fileToBase64(fileOrBase64);
+      }
+
+      await new Promise((res, rej) => {
+        if (img.complete && img.naturalWidth) return res();
+        img.onload = () => res();
+        img.onerror = () => rej(new Error('โหลดรูปภาพไม่สำเร็จ'));
+      });
+
+      const detector = await initFaceDetector();
+      if (!detector) {
+        console.warn('Face detector not ready, fallback to original');
+        return resolve({ base64: img.src, detected: false, rawImg: img });
+      }
+
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.warn('MediaPipe detection timed out, fallback to original');
+          resolve({ base64: img.src, detected: false, rawImg: img });
+        }
+      }, 5000);
+
+      detector.onResults((results) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timer);
+
+        if (!results || !results.detections || results.detections.length === 0) {
+          console.log('No face detected by MediaPipe, keeping original');
+          return resolve({ base64: img.src, detected: false, rawImg: img });
+        }
+
+        const box = results.detections[0].boundingBox;
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+
+        const fx = box.xCenter * iw;
+        const fy = box.yCenter * ih;
+        const fw = box.width * iw;
+        const fh = box.height * ih;
+
+        // คำนวณกรอบสัดส่วนการ์ดให้กระชับ โฟกัสเฉพาะใบหน้าและช่วงบนให้พอดีกับการ์ด
+        let cropH = fh * 2.6;
+        let cropW = cropH * (4 / 3.2); // สัดส่วนการ์ดทรงกะทัดรัด
+
+        if (cropW > iw) {
+          cropW = iw;
+          cropH = cropW * (3.2 / 4);
+        }
+        if (cropH > ih) {
+          cropH = ih;
+          cropW = cropH * (4 / 3.2);
+        }
+
+        let cropX = fx - cropW / 2;
+        let cropY = fy - cropH * 0.42; // ระยะศีรษะ
+
+        if (cropX < 0) cropX = 0;
+        if (cropY < 0) cropY = 0;
+        if (cropX + cropW > iw) cropX = iw - cropW;
+        if (cropY + cropH > ih) cropY = ih - cropH;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 480;
+        canvas.height = 384;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        ctx.drawImage(
+          img,
+          cropX,
+          cropY,
+          cropW,
+          cropH,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        const croppedBase64 = canvas.toDataURL('image/jpeg', 0.92);
+        resolve({
+          base64: croppedBase64,
+          detected: true,
+          cropBox: {
+            cropX,
+            cropY,
+            cropW,
+            cropH,
+            fxPercent: Math.max(0, Math.min(100, Math.round((fx / iw) * 100))),
+            fyPercent: Math.max(0, Math.min(100, Math.round((fy / ih) * 100)))
+          },
+          rawImg: img
+        });
+      });
+
+      await detector.send({ image: img });
+    } catch (err) {
+      console.error('MediaPipe crop error:', err);
+      const fallback =
+        typeof fileOrBase64 === 'string'
+          ? fileOrBase64
+          : await fileToBase64(fileOrBase64).catch(() => '');
+      resolve({ base64: fallback, detected: false });
+    }
+  });
+}
+
+/**
+ * ฟังก์ชันสร้างรูปภาพที่ครอบแล้วจริง (สัดส่วน 4:3.2 ขนาด 480x384 px Base64 JPEG)
+ * จากภาพและพิกัดจุดโฟกัส (X%, Y%)
+ * นำรูปที่ครอบแล้วนี้กลับไปอัปเดตแทนรูปเดิมได้ทันที
+ */
+function generateCroppedImageFromPos(img, pos, scale = 1.0) {
+  return new Promise((resolve) => {
+    try {
+      if (!img) return resolve('');
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      if (!iw || !ih) return resolve(img.src || '');
+
+      const targetAspect = 4 / 3.2;
+      let baseW = iw;
+      let baseH = baseW / targetAspect;
+      if (baseH > ih) {
+        baseH = ih;
+        baseW = baseH * targetAspect;
+      }
+
+      const s = Math.max(1.0, Number(scale) || 1.0);
+      const cropW = baseW / s;
+      const cropH = baseH / s;
+
+      const centerX = ((Number(pos.x !== undefined ? pos.x : 50)) / 100) * iw;
+      const centerY = ((Number(pos.y !== undefined ? pos.y : 22)) / 100) * ih;
+
+      let cropX = centerX - cropW / 2;
+      let cropY = centerY - cropH / 2;
+
+      if (cropX < 0) cropX = 0;
+      if (cropY < 0) cropY = 0;
+      if (cropX + cropW > iw) cropX = iw - cropW;
+      if (cropY + cropH > ih) cropY = ih - cropH;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 480;
+      canvas.height = 384;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      resolve(dataUrl);
+    } catch (e) {
+      console.warn('Canvas crop generation fallback:', e);
+      resolve(img ? img.src : '');
+    }
+  });
+}
+
 // ⚡ ตัวช่วยดึงข้อมูลด่วนผ่าน Google Sheets CSV Link (เร็วกว่า Apps Script 10-20 เท่า)
 const GOOGLE_SPREADSHEET_ID = 
-  (typeof localStorage !== 'undefined' && localStorage.getItem('BONSAI_SPREADSHEET_ID')) || '';
+  (typeof localStorage !== 'undefined' && localStorage.getItem('BONSAI_SPREADSHEET_ID')) || 
+  '1JXpFFL-whqQsh9WLZR-qrz9xCxK-HLY3hQRy9iK3Uwg';
 
 /**
  * ฟังก์ชันแปลงข้อความ CSV เป็น JavaScript Objects (RFC 4180 รองรับเครื่องหมายจุลภาคและเครื่องหมายคำพูด)
@@ -97,7 +340,7 @@ const INITIAL_BATCH_METADATA = [
     title: 'เรียนรู้การทำบอนไซเบี้ยงต้น',
     themeColor: 'cyan',
     date: '20-21 มิถุนายน 2569',
-   location: 'สวนบางกอกบอนไซ ไร่อริยะ กาญจนบุรี',
+    location: 'สวนบางกอกบอนไซ ไร่อริยะ กาญจนบุรี',
     instructor: 'อาจารย์พิศิษย์ อริยะอมรกุล นายกสมาคมบอนไซไทย',
     description: 'เน้นพื้นฐานดิน กระถาง การขยายพันธุ์ และหลักการตัดทดกิ่งไม้เขตร้อน',
     folder: 'bangkokimage/1',
@@ -131,28 +374,31 @@ const INITIAL_BATCH_METADATA = [
   }
 ];
 
-// พิกัดจุดโฟกัสโซนใบหน้า (Face Focus Coordinates) สำหรับครอบรูปอัตโนมัติ
-// โฟกัสเฉพาะโซนหน้าขึ้นไปให้ได้สัดส่วนภาพถ่ายบุคคล
+// พิกัดจุดโฟกัสโซนใบหน้า (Face Focus Coordinates) สำหรับครอบรูปอัตโนมัติ (object-position)
+// จัดวางใบหน้าให้อยู่กึ่งกลางการ์ดรูปภาพแบบ 100% ไม่มีขอบขาว
 const FACE_FOCUS_MAP = {
-  '78995_0.jpg': { x: 23, y: 13, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '78996_0.jpg': { x: 34, y: 14, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '78997_0.jpg': { x: 78, y: 12, scale: 1.85 }, // ยืนฝั่งขวา
-  '78998_0.jpg': { x: 27, y: 14, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '78999_0.jpg': { x: 80, y: 14, scale: 1.85 }, // ยืนฝั่งขวา
-  '79000_0.jpg': { x: 21, y: 15, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '79001_0.jpg': { x: 32, y: 16, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '79002_0.jpg': { x: 28, y: 16, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '79003_0.jpg': { x: 24, y: 15, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '79004_0.jpg': { x: 80, y: 15, scale: 1.85 }, // ยืนฝั่งขวา
-  '79005_0.jpg': { x: 77, y: 28, scale: 1.85 }, // ยืนฝั่งขวา
-  '79006_0.jpg': { x: 50, y: 22, scale: 1.75 }, // อยู่ตรงกลาง
-  '79007_0.jpg': { x: 23, y: 24, scale: 1.85 }, // ยืนฝั่งซ้าย
-  '79009_0.jpg': { x: 82, y: 35, scale: 1.85 }, // ยืนฝั่งขวา
-  '79010_0.jpg': { x: 85, y: 24, scale: 1.85 }, // ยืนฝั่งขวา
-  '79011_0.jpg': { x: 63, y: 33, scale: 1.85 }, // ยืนฝั่งขวา
-  '79012_0.jpg': { x: 50, y: 27, scale: 1.85 }, // อยู่ตรงกลาง
-  '79013_0.jpg': { x: 50, y: 25, scale: 1.85 }, // อยู่ตรงกลาง
-  '79014_0.jpg': { x: 50, y: 25, scale: 1.85 }  // อยู่ตรงกลาง
+  '78995_0.jpg': { x: 26, y: 18, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณพัศ A008)
+  '78996_0.jpg': { x: 34, y: 16, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณกัญ A015)
+  '78997_0.jpg': { x: 78, y: 16, scale: 1.0 }, // ยืนฝั่งขวา (คุณวีระ A014)
+  '78998_0.jpg': { x: 34, y: 18, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณโชค A011)
+  '78999_0.jpg': { x: 78, y: 18, scale: 1.0 }, // ยืนฝั่งขวา (คุณธีร์ A013)
+  '79000_0.jpg': { x: 26, y: 18, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณบอย A009)
+  '79001_0.jpg': { x: 30, y: 15, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณธน A010)
+  '79002_0.jpg': { x: 24, y: 22, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณปิยะ A012)
+  '79003_0.jpg': { x: 26, y: 20, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณกิต A016)
+  '79004_0.jpg': { x: 78, y: 20, scale: 1.0 }, // ยืนฝั่งขวา (คุณชาญ A017)
+  '79005_0.jpg': { x: 78, y: 22, scale: 1.0 }, // ยืนฝั่งขวา (คุณพงษ์ A018)
+  '79006_0.jpg': { x: 50, y: 26, scale: 1.0 }, // กึ่งกลาง (คุณณัฐ A019)
+  '79007_0.jpg': { x: 25, y: 24, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณเทพ A020)
+  '79008_0.jpg': { x: 53, y: 20, scale: 1.0 }, // กึ่งกลาง (คุณศิริ A021)
+  '79009_0.jpg': { x: 72, y: 35, scale: 1.0 }, // ยืนฝั่งขวา (คุณรินทร์ A022)
+  '79010_0.jpg': { x: 86, y: 22, scale: 1.0 }, // ยืนฝั่งขวา (คุณเชษฐ์ A023)
+  '79011_0.jpg': { x: 74, y: 26, scale: 1.0 }, // ยืนฝั่งขวา (คุณสรณ์ A024)
+  '79012_0.jpg': { x: 51, y: 26, scale: 1.0 }, // กึ่งกลาง (คุณชวลิต A025)
+  '79013_0.jpg': { x: 45, y: 20, scale: 1.0 }, // กึ่งกลาง (คุณวิทย์ A026)
+  '79014_0.jpg': { x: 45, y: 22, scale: 1.0 }, // กึ่งกลาง (คุณภาณุ A027)
+  '79019_0.jpg': { x: 24, y: 18, scale: 1.0 }, // ยืนฝั่งซ้าย (คุณวณิช A028)
+  'trainee_01.jpg': { x: 50, y: 22, scale: 1.0 }
 };
 
 // รายชื่อผู้ผ่านการอบรมรุ่น 1 ที่ตรงกับภาพถ่ายจริงในโฟลเดอร์ bangkokimage/1
@@ -176,7 +422,8 @@ const KNOWN_TRAINEES_MAP = {
   '79011_0.jpg': { name: 'นางสาวอนุสรณ์ วิชิตกุล', nickname: 'คุณสรณ์', role: 'สมาชิก', code: 'A024' },
   '79012_0.jpg': { name: 'นายชวลิต ลิขิตพงษ์', nickname: 'คุณชวลิต', role: 'สมาชิก', code: 'A025' },
   '79013_0.jpg': { name: 'นายประวิทย์ อักษรทอง', nickname: 'คุณวิทย์', role: 'สมาชิก', code: 'A026' },
-  '79014_0.jpg': { name: 'นายภาณุวัฒน์ เด่นดวง', nickname: 'คุณภาณุ', role: 'สมาชิก', code: 'A027' }
+  '79014_0.jpg': { name: 'นายภาณุวัฒน์ เด่นดวง', nickname: 'คุณภาณุ', role: 'สมาชิก', code: 'A027' },
+  '79019_0.jpg': { name: 'นายวณิช กฤษณะเศรณี', nickname: 'คุณวณิช', role: 'สมาชิก', code: 'A028' }
 };
 
 // ฟังก์ชันแยกชื่อจริงและชื่อเล่นจากชื่อไฟล์แบบอัตโนมัติ
@@ -247,7 +494,6 @@ function parseTraineeFromFilename(filename, index, batchId) {
 function CropEditorModal({
   trainee,
   cardTheme,
-  cardSize,
   currentCrop,
   defaultCrop,
   onSave,
@@ -261,9 +507,33 @@ function CropEditorModal({
   const [scale, setScale] = useState(currentCrop.scale || 1.85);
   const [copied, setCopied] = useState(false);
   const [hoverCoord, setHoverCoord] = useState(null);
+  const [isDetectingFace, setIsDetectingFace] = useState(false);
+  const [isSavingCrop, setIsSavingCrop] = useState(false);
+  const [aiMessage, setAiMessage] = useState(null);
   const imgRef = useRef(null);
 
   const filename = trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '');
+
+  // ตรวจจับใบหน้าอัตโนมัติด้วย AI MediaPipe (แบบเดียวกับบัตรสมาชิก)
+  const handleAutoDetectFace = async () => {
+    setIsDetectingFace(true);
+    setAiMessage({ type: 'info', text: 'กำลังตรวจจับใบหน้าด้วย AI MediaPipe...' });
+    try {
+      const result = await cropFaceWithMediaPipe(trainee.image);
+      if (result.detected && result.cropBox) {
+        setPos({ x: result.cropBox.fxPercent, y: result.cropBox.fyPercent });
+        setScale(1.85);
+        setAiMessage({ type: 'success', text: '✓ AI MediaPipe ตรวจพบใบหน้าและปรับตำแหน่งโฟกัสให้อัตโนมัติแล้ว!' });
+      } else {
+        setAiMessage({ type: 'warn', text: 'ไม่พบใบหน้าชัดเจนในภาพ ใช้จุดโฟกัสกึ่งกลางแทน' });
+      }
+    } catch (e) {
+      setAiMessage({ type: 'warn', text: 'การตรวจจับใบหน้าขัดข้อง คุณสามารถคลิกเลือกจุดบนภาพได้โดยตรง' });
+    } finally {
+      setIsDetectingFace(false);
+      setTimeout(() => setAiMessage(null), 4000);
+    }
+  };
 
   // ดักจับการคลิกบนรูปภาพเพื่อคำนวณตำแหน่งพิกัด X% และ Y%
   const handleImageClick = (e) => {
@@ -313,6 +583,28 @@ function CropEditorModal({
     onReset();
   };
 
+  // ครอปภาพจริงเป็น Base64 3:4 และส่งกลับไปแทนที่รูปเดิม
+  const handleSaveCrop = async () => {
+    setIsSavingCrop(true);
+    try {
+      let croppedBase64 = null;
+      if (imgRef.current) {
+        croppedBase64 = await generateCroppedImageFromPos(imgRef.current, pos, scale);
+      }
+      onSave({
+        croppedImage: croppedBase64,
+        x: pos.x,
+        y: pos.y,
+        scale: scale
+      });
+    } catch (e) {
+      console.warn('Crop save error:', e);
+      onSave({ x: pos.x, y: pos.y, scale });
+    } finally {
+      setIsSavingCrop(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
       <div className={`rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
@@ -343,7 +635,7 @@ function CropEditorModal({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                <span>เลือกจุดครอบรูปภาพด้วยตนเอง</span>
+                <span>เลือกจุดครอบรูปภาพ</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
                   cardTheme === 'wattvision' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-emerald-100 text-emerald-800'
                 }`}>
@@ -351,7 +643,7 @@ function CropEditorModal({
                 </span>
               </h3>
               <p className={`text-xs ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'text-gray-500'}`}>
-                คลิกบนภาพถ่ายเพื่อเลือกตำแหน่งที่ต้องการให้ระบบครอบรูปอัตโนมัติ
+                คลิกบนภาพถ่ายเพื่อเลือกจุดโฟกัส หรือให้ AI ครอปภาพสัดส่วน 3:4 อัตโนมัติ
               </p>
             </div>
           </div>
@@ -432,30 +724,63 @@ function CropEditorModal({
               </div>
             </div>
 
-            {/* Quick Position Presets & Fine-tuning */}
+            {/* AI Status Message */}
+            {aiMessage && (
+              <div className={`mt-2 p-2.5 rounded-xl text-xs flex items-center gap-2 border transition-all ${
+                aiMessage.type === 'success'
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                  : aiMessage.type === 'warn'
+                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                  : 'bg-sky-950/80 text-sky-300 border-sky-500/50'
+              }`}>
+                <i className={`fa-solid ${aiMessage.type === 'success' ? 'fa-circle-check text-emerald-400' : aiMessage.type === 'warn' ? 'fa-triangle-exclamation text-amber-400' : 'fa-spinner fa-spin text-sky-400'}`}></i>
+                <span className="font-medium">{aiMessage.text}</span>
+              </div>
+            )}
+
+            {/* Quick Position Presets, AI Auto Crop & Fine-tuning */}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="opacity-70 text-[11px]">พิกัดสำเร็จรูป:</span>
+                {/* ปุ่ม AI MediaPipe ครอปใบหน้าอัตโนมัติ (ดึงจากบัตรสมาชิก) */}
                 <button
                   type="button"
-                  onClick={() => setPos({ x: 25, y: 15 })}
+                  onClick={handleAutoDetectFace}
+                  disabled={isDetectingFace}
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                  title="ใช้ AI MediaPipe ตรวจจับใบหน้าและคำนวณจุดกึ่งกลางให้อัตโนมัติ"
+                >
+                  <i className={`fa-solid ${isDetectingFace ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles text-amber-300'}`}></i>
+                  <span>{isDetectingFace ? 'กำลัง AI ตรวจจับ...' : '⚡ AI ครอปใบหน้า'}</span>
+                </button>
+
+                <span className="opacity-70 text-[11px] ml-1">พิกัดสำเร็จรูป:</span>
+                <button
+                  type="button"
+                  onClick={() => setPos({ x: 28, y: 24 })}
                   className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
                 >
                   👤 คนยืนซ้าย
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPos({ x: 50, y: 18 })}
+                  onClick={() => setPos({ x: 50, y: 26 })}
                   className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
                 >
                   👤 กึ่งกลาง
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPos({ x: 75, y: 18 })}
+                  onClick={() => setPos({ x: 74, y: 22 })}
                   className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
                 >
                   👤 คนยืนขวา
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPos({ x: 50, y: 50 })}
+                  className="px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-emerald-500 hover:text-white transition font-medium cursor-pointer"
+                >
+                  🎯 กึ่งกลางภาพ
                 </button>
               </div>
 
@@ -517,7 +842,7 @@ function CropEditorModal({
                   ตัวอย่างการ์ดจริง (Live Preview)
                 </span>
                 <span className="text-[11px] font-mono opacity-70">
-                  {cardSize === 'compact' ? 'สัดส่วนย่อสั้น (4:3.1)' : 'สัดส่วนปกติ (3:4)'}
+                  สัดส่วนมาตรฐาน 3:4
                 </span>
               </div>
 
@@ -530,9 +855,7 @@ function CropEditorModal({
                   : 'bg-white border-emerald-400 shadow-md'
               }`}>
                 {/* Image Frame */}
-                <div className={`relative overflow-hidden ${
-                  cardSize === 'compact' ? 'aspect-[4/3.1]' : 'aspect-[3/4]'
-                } ${
+                <div className={`relative overflow-hidden aspect-[4/3.2] ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#121212]'
                     : cardTheme === 'poster'
@@ -547,13 +870,13 @@ function CropEditorModal({
                       height: '100%',
                       objectFit: 'cover',
                       objectPosition: `${pos.x}% ${pos.y}%`,
-                      transform: `scale(${scale})`,
+                      transform: scale > 1.05 ? `scale(${scale})` : 'none',
                       transformOrigin: `${pos.x}% ${pos.y}%`,
                       transition: 'none'
                     }}
                   />
                   <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/75 text-[#00E5FF] text-[9px] rounded font-mono border border-white/10">
-                    {pos.x}%, {pos.y}% • {scale}x
+                    {pos.x}%, {pos.y}%
                   </div>
                 </div>
 
@@ -643,11 +966,12 @@ function CropEditorModal({
             <div className="space-y-2 pt-2">
               <button
                 type="button"
-                onClick={() => onSave({ x: pos.x, y: pos.y, scale })}
-                className="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+                onClick={handleSaveCrop}
+                disabled={isSavingCrop}
+                className="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                <i className="fa-solid fa-circle-check text-base"></i>
-                <span>บันทึกและนำไปใช้ทันที</span>
+                <i className={`fa-solid ${isSavingCrop ? 'fa-spinner fa-spin' : 'fa-circle-check text-base'}`}></i>
+                <span>{isSavingCrop ? 'กำลังสร้างรูปที่ครอบและบันทึก...' : 'บันทึกรูปและนำไปใช้แทนรูปเดิมทันที'}</span>
               </button>
 
               <div className="flex items-center gap-2">
@@ -706,20 +1030,68 @@ function EditTraineeModal({
   const [certNo, setCertNo] = useState(trainee.certNo || '');
   const [status, setStatus] = useState(trainee.status || 'จบหลักสูตร');
   const [image, setImage] = useState(trainee.image || '');
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  const [photoCropStatus, setPhotoCropStatus] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleFileUpload = (e) => {
+  // ดึงวิธีการทำงานของบัตรสมาชิกมาใช้ (MediaPipe Face Detection & Auto Crop 3:4)
+  const handleFileUpload = async (e) => {
     const file = e.target.files && e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('ไฟล์รูปภาพมีขนาดใหญ่เกิน 5MB กรุณาเลือกไฟล์ที่มีขนาดเล็กลง');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        setImage(uploadEvent.target.result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP)');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      alert('ไฟล์รูปภาพมีขนาดใหญ่เกิน 15MB กรุณาเลือกไฟล์ที่มีขนาดเล็กลง');
+      return;
+    }
+
+    setIsProcessingPhoto(true);
+    setPhotoCropStatus({ processing: true, text: 'กำลังตรวจจับใบหน้าและครอบรูป... (MediaPipe)' });
+
+    try {
+      const result = await cropFaceWithMediaPipe(file);
+      setImage(result.base64);
+      setPhotoCropStatus({
+        processing: false,
+        detected: result.detected,
+        text: result.detected ? '✓ AI ครอปใบหน้า' : 'รูปต้นฉบับ'
+      });
+    } catch (err) {
+      console.error('Photo crop error:', err);
+      const fallback = await fileToBase64(file).catch(() => '');
+      setImage(fallback);
+      setPhotoCropStatus({
+        processing: false,
+        detected: false,
+        text: 'เลือกรูปภาพเรียบร้อยแล้ว'
+      });
+    } finally {
+      setIsProcessingPhoto(false);
+    }
+  };
+
+  // ปุ่มกดสั่งให้ AI MediaPipe วิเคราะห์และครอบรูปปัจจุบันอีกครั้ง
+  const handleTriggerMediaPipeCrop = async () => {
+    if (!image || isProcessingPhoto) return;
+    setIsProcessingPhoto(true);
+    setPhotoCropStatus({ processing: true, text: 'กำลังตรวจจับใบหน้าและครอบรูป...' });
+    try {
+      const result = await cropFaceWithMediaPipe(image);
+      setImage(result.base64);
+      setPhotoCropStatus({
+        processing: false,
+        detected: result.detected,
+        text: result.detected ? '✓ AI ครอปใบหน้า' : 'รูปต้นฉบับ'
+      });
+    } catch (err) {
+      console.error('Trigger crop error:', err);
+    } finally {
+      setIsProcessingPhoto(false);
     }
   };
 
@@ -740,8 +1112,8 @@ function EditTraineeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-fadeIn">
-      <div className={`rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 md:p-8 overflow-y-auto animate-fadeIn">
+      <div className={`rounded-3xl shadow-2xl max-w-3xl sm:max-w-4xl w-full overflow-hidden border flex flex-col my-auto transition-all ${
         cardTheme === 'wattvision'
           ? 'bg-[#181818] border-[#2C2C2E] text-white'
           : cardTheme === 'poster'
@@ -749,16 +1121,16 @@ function EditTraineeModal({
           : 'bg-white border-gray-200 text-gray-800'
       }`}>
         
-        {/* Header */}
-        <div className={`px-6 py-4 flex items-center justify-between border-b ${
+        {/* Header (ใหญ่และชัดเจน) */}
+        <div className={`px-6 sm:px-8 py-5 flex items-center justify-between border-b ${
           cardTheme === 'wattvision'
             ? 'bg-[#1F1F1F] border-[#2C2C2E]'
             : cardTheme === 'poster'
             ? 'bg-[#062019] border-emerald-800/80'
-            : 'bg-emerald-50/80 border-emerald-100 text-gray-800'
+            : 'bg-emerald-50/90 border-emerald-100 text-gray-800'
         }`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center font-bold text-base shadow-xs ${
+          <div className="flex items-center gap-3.5">
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm ${
               cardTheme === 'wattvision'
                 ? 'bg-[#00E5FF] text-[#121212]'
                 : cardTheme === 'poster'
@@ -768,23 +1140,23 @@ function EditTraineeModal({
               <i className="fa-solid fa-user-pen"></i>
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-bold flex flex-wrap items-center gap-2">
                 <span>แก้ไขข้อมูลผู้ผ่านการอบรม</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-mono font-bold ${
                   cardTheme === 'wattvision' ? 'bg-[#00E5FF]/20 text-[#00E5FF]' : 'bg-emerald-100 text-emerald-800'
                 }`}>
                   {trainee.id}
                 </span>
               </h3>
-              <p className={`text-xs ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'text-gray-500'}`}>
-                อัปเดตชื่อ รูปถ่าย ตำแหน่ง และสถานะ
+              <p className={`text-xs sm:text-sm mt-0.5 ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'text-gray-500'}`}>
+                อัปเดตชื่อ รูปถ่าย ตำแหน่ง สถานะ และเลขที่ใบประกาศนียบัตร
               </p>
             </div>
           </div>
           
           <button
             onClick={onClose}
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-sm border transition cursor-pointer ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-base border transition cursor-pointer shrink-0 ${
               cardTheme === 'wattvision'
                 ? 'bg-[#141414] border-[#2C2C2E] text-gray-400 hover:text-white'
                 : 'bg-white border-gray-200 text-gray-500 hover:text-gray-700'
@@ -794,34 +1166,56 @@ function EditTraineeModal({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
+        {/* Form Body (กว้างขวาง สบายตา) */}
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
           
-          {/* ส่วนเปลี่ยนรูปภาพ (Photo Update) */}
-          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center gap-4 ${
+          {/* ส่วนเปลี่ยนรูปภาพ (Photo Update - พร้อมกล่องพรีวิวขนาดใหญ่) */}
+          <div className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-center gap-5 ${
             cardTheme === 'wattvision'
               ? 'bg-[#121212] border-[#2C2C2E]'
               : 'bg-stone-50 border-gray-200'
           }`}>
-            <div className="w-24 h-28 rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md shrink-0 relative bg-stone-200">
-              <img
-                src={image}
-                alt="รูปถ่าย"
-                className="w-full h-full object-cover"
-                onError={(e) => { e.target.src = 'sample-member.jpg'; }}
-              />
+            {/* กล่องแสดงรูปตัวอย่างขนาดใหญ่และคมชัด สัดส่วนการ์ด 4:3.2 */}
+            <div className="w-44 sm:w-56 aspect-[4/3.2] rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-lg shrink-0 relative bg-stone-200 flex flex-col items-center justify-center">
+              {isProcessingPhoto ? (
+                <div className="flex flex-col items-center justify-center p-3 text-center">
+                  <i className="fa-solid fa-spinner fa-spin text-3xl text-emerald-600 mb-2"></i>
+                  <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">AI กำลังตรวจจับ...</p>
+                </div>
+              ) : (
+                <>
+                  <img
+                    src={image}
+                    alt="รูปถ่าย"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.src = 'sample-member.jpg'; }}
+                  />
+                  {photoCropStatus && (
+                    <span className={`absolute bottom-2 left-1/2 transform -translate-x-1/2 text-white text-[10px] px-2.5 py-0.5 rounded-full shadow-md whitespace-nowrap ${
+                      photoCropStatus.detected ? 'bg-emerald-600 font-bold' : 'bg-stone-700 font-medium'
+                    }`}>
+                      {photoCropStatus.text}
+                    </span>
+                  )}
+                </>
+              )}
             </div>
             
-            <div className="flex-1 text-center sm:text-left space-y-2">
-              <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                <i className="fa-solid fa-image mr-1.5"></i>
-                อัปเดตรูปถ่ายผู้เข้าอบรม
+            <div className="flex-1 text-center sm:text-left space-y-2.5">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <i className="fa-solid fa-image"></i>
+                  <span>อัปเดตรูปถ่ายผู้เข้าอบรม</span>
+                </span>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-semibold">
+                  AI MediaPipe Auto Crop
+                </span>
               </div>
-              <p className="text-[11px] opacity-75">
-                เลือกไฟล์รูปภาพจากเครื่องของคุณ (รองรับ JPG, PNG, WEBP)
+              <p className="text-xs opacity-80 leading-relaxed">
+                เลือกรูปจากเครื่อง AI จะตรวจจับใบหน้าและครอบรูปสัดส่วนให้พอดีกับการ์ดให้อัตโนมัติ (ถอดแบบจากระบบบัตรสมาชิก)
               </p>
               
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 pt-1.5">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -832,34 +1226,46 @@ function EditTraineeModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5"
+                  disabled={isProcessingPhoto}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <i className="fa-solid fa-arrow-up-from-bracket"></i>
                   <span>เลือกรูปจากเครื่อง</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerMediaPipeCrop}
+                  disabled={isProcessingPhoto || !image}
+                  className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  title="ให้ AI MediaPipe ตรวจจับและครอบภาพปัจจุบันใหม่อีกครั้ง"
+                >
+                  <i className="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                  <span>AI ครอปหน้านี้</span>
                 </button>
 
                 {onOpenCrop && (
                   <button
                     type="button"
                     onClick={() => onOpenCrop({ ...trainee, image, name, nickname })}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl border transition cursor-pointer flex items-center gap-1.5 ${
                       cardTheme === 'wattvision'
                         ? 'bg-[#1E1E1E] hover:bg-[#252525] border-[#2C2C2E] text-[#00E5FF]'
                         : 'bg-white hover:bg-gray-100 border-gray-300 text-gray-700'
                     }`}
                   >
                     <i className="fa-solid fa-crop-simple text-amber-500"></i>
-                    <span>ปรับจุดครอบรูป</span>
+                    <span>ปรับจุดครอบเอง</span>
                   </button>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ฟิลด์กรอกข้อมูล */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+          {/* ฟิลด์กรอกข้อมูล (Grid 2 คอลัมน์ ขนาดฟอนต์และ Input ใหญ่ขึ้น) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 text-sm">
             <div>
-              <label className="block font-semibold mb-1 opacity-80">
+              <label className="block font-bold text-xs sm:text-sm mb-1.5 opacity-90">
                 ชื่อ - นามสกุลจริง <span className="text-rose-500">*</span>
               </label>
               <input
@@ -868,7 +1274,7 @@ function EditTraineeModal({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="เช่น นายสมชาย ใจดี"
                 required
-                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#141414] border-[#2C2C2E] text-white'
                     : 'bg-white border-gray-300 text-gray-900'
@@ -877,7 +1283,7 @@ function EditTraineeModal({
             </div>
 
             <div>
-              <label className="block font-semibold mb-1 opacity-80">
+              <label className="block font-bold text-xs sm:text-sm mb-1.5 opacity-90">
                 ชื่อเล่น
               </label>
               <input
@@ -885,7 +1291,7 @@ function EditTraineeModal({
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="เช่น คุณชาย"
-                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#141414] border-[#2C2C2E] text-white'
                     : 'bg-white border-gray-300 text-gray-900'
@@ -894,7 +1300,7 @@ function EditTraineeModal({
             </div>
 
             <div>
-              <label className="block font-semibold mb-1 opacity-80">
+              <label className="block font-bold text-xs sm:text-sm mb-1.5 opacity-90">
                 ตำแหน่งในรุ่น
               </label>
               <input
@@ -902,7 +1308,7 @@ function EditTraineeModal({
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="เช่น สมาชิก, ประธานรุ่นที่ 1"
-                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#141414] border-[#2C2C2E] text-white'
                     : 'bg-white border-gray-300 text-gray-900'
@@ -911,13 +1317,13 @@ function EditTraineeModal({
             </div>
 
             <div>
-              <label className="block font-semibold mb-1 opacity-80">
+              <label className="block font-bold text-xs sm:text-sm mb-1.5 opacity-90">
                 สถานะการอบรม
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#141414] border-[#2C2C2E] text-white'
                     : 'bg-white border-gray-300 text-gray-900'
@@ -931,7 +1337,7 @@ function EditTraineeModal({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-semibold mb-1 opacity-80">
+              <label className="block font-bold text-xs sm:text-sm mb-1.5 opacity-90">
                 เลขที่ใบรับรอง (Certificate No.)
               </label>
               <input
@@ -939,7 +1345,7 @@ function EditTraineeModal({
                 value={certNo}
                 onChange={(e) => setCertNo(e.target.value)}
                 placeholder="เช่น TBA-CERT-2026-0101"
-                className={`w-full px-3 py-2 rounded-xl border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm sm:text-base font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                   cardTheme === 'wattvision'
                     ? 'bg-[#141414] border-[#2C2C2E] text-white'
                     : 'bg-white border-gray-300 text-gray-900'
@@ -949,11 +1355,11 @@ function EditTraineeModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
+              className={`px-5 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border transition cursor-pointer ${
                 cardTheme === 'wattvision'
                   ? 'bg-[#252525] hover:bg-[#303030] text-gray-300 border-[#2C2C2E]'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
@@ -963,7 +1369,7 @@ function EditTraineeModal({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+              className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg hover:shadow-xl transition flex items-center gap-2 cursor-pointer"
             >
               <i className="fa-solid fa-floppy-disk"></i>
               <span>บันทึกการเปลี่ยนแปลง</span>
@@ -1111,20 +1517,8 @@ export default function BonsaiTraineeChart() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'org'
 
-  // สไตล์การออกแบบ: 'light' (สว่าง โทนสีขาวตามที่ขอ) | 'wattvision' | 'poster'
+  // สไตล์การออกแบบ: 'light' (สว่าง โทนสีขาว) | 'wattvision' | 'poster'
   const [cardTheme, setCardTheme] = useState('light');
-
-  // ขนาดการ์ด: 'compact' (ย่อสั้นลงตามที่ขอ) | 'normal'
-  const [cardSize, setCardSize] = useState('compact');
-
-  // โหมดการครอบรูปภาพ: 'face' (ครอบเฉพาะโซนหน้าขึ้นไป ได้สัดส่วน) | 'full' (แสดงภาพเต็มตัว)
-  const [cropMode, setCropMode] = useState(() => {
-    try {
-      return localStorage.getItem('bonsai_crop_mode') || 'face';
-    } catch (e) {
-      return 'face';
-    }
-  });
 
   // รายการพิกัดครอบรูปที่ผู้ใช้กำหนดเองจากการกดรูปภาพ (บันทึกจำใน LocalStorage)
   const [customCropMap, setCustomCropMap] = useState(() => {
@@ -1198,29 +1592,164 @@ export default function BonsaiTraineeChart() {
 
   const prevImageCounts = useRef({});
 
-  // บันทึกและปรับปรุงจุดครอบรูปของผู้ใช้ลงใน State และ LocalStorage
-  const handleSaveCustomCrop = (filename, cropData) => {
+  // ฟังก์ชันค้นหาและดึงพิกัดจุดโฟกัสครอบรูปที่แม่นยำที่สุดของผู้เข้าอบรมท่านนี้
+  const getTraineeCrop = useCallback((trainee) => {
+    if (!trainee) return { x: 50, y: 25, scale: 1.85 };
+    const id = typeof trainee === 'object' ? trainee.id : null;
+    const rawFname = typeof trainee === 'object' ? (trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '')) : trainee;
+    const cleanFname = rawFname ? rawFname.split('?')[0].split('#')[0] : '';
+
+    // 1. ตรวจสอบจาก customCropMap โดยใช้ trainee ID (แม่นยำสูงสุด ไม่ซ้ำกันแน่นอน)
+    if (id && customCropMap[id]) return customCropMap[id];
+
+    // 2. ตรวจสอบจาก customCropMap โดยใช้ชื่อไฟล์
+    if (cleanFname && customCropMap[cleanFname]) return customCropMap[cleanFname];
+
+    // 3. ตรวจสอบจากข้อมูลใน trainee (เช่น ดึงมาจาก Google Sheets / editedTrainees)
+    if (typeof trainee === 'object' && trainee.cropFocusX !== undefined && trainee.cropFocusX !== '' && !isNaN(Number(trainee.cropFocusX))) {
+      return {
+        x: Number(trainee.cropFocusX),
+        y: Number(trainee.cropFocusY),
+        scale: Number(trainee.cropScale || 1.85)
+      };
+    }
+
+    // 4. ตรวจสอบจากพิกัดมาตรฐานของระบบ (FACE_FOCUS_MAP) ที่คำนวณไว้ตรงกลางสำหรับทุกรูป
+    if (cleanFname && FACE_FOCUS_MAP[cleanFname]) return FACE_FOCUS_MAP[cleanFname];
+
+    // 5. ค่าเริ่มต้นตรงกลางมาตรฐาน
+    return { x: 50, y: 25, scale: 1.85 };
+  }, [customCropMap]);
+
+  // บันทึกและปรับปรุงจุดครอบรูปของผู้ใช้ลงใน State และ LocalStorage พร้อมนำรูปที่ครอบแล้วไปอัปเดตแทนรูปเดิม
+  const handleSaveCustomCrop = (trainee, cropData) => {
+    if (!trainee) return;
+    const id = trainee.id;
+    const rawFname = trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '');
+    const cleanFname = rawFname ? rawFname.split('?')[0].split('#')[0] : '';
+    const newImage = cropData.croppedImage || trainee.image;
+
+    // 1. บันทึกลง customCropMap ทั้งแบบ ID และ Clean Filename
     setCustomCropMap((prev) => {
-      const updated = { ...prev, [filename]: cropData };
+      const updated = {
+        ...prev,
+        ...(id ? { [id]: cropData } : {}),
+        ...(cleanFname ? { [cleanFname]: cropData } : {})
+      };
       try {
         localStorage.setItem('bonsai_custom_crops', JSON.stringify(updated));
       } catch (e) {}
       return updated;
     });
-    setCropToast(`บันทึกจุดครอบรูป ${filename} เรียบร้อยแล้ว (X: ${cropData.x}%, Y: ${cropData.y}%, ซูม: ${cropData.scale}x)`);
+
+    // 2. อัปเดต batches ทันทีเพื่อให้ UI อัปเดตใน 0ms และเก็บรูปใหม่ลง LocalStorage
+    setBatches((prevBatches) => {
+      const updated = prevBatches.map(b => ({
+        ...b,
+        trainees: b.trainees.map(t => {
+          if (t.id === id || (cleanFname && t.filename === cleanFname)) {
+            return {
+              ...t,
+              image: newImage,
+              cropFocusX: cropData.x,
+              cropFocusY: cropData.y,
+              cropScale: cropData.scale
+            };
+          }
+          return t;
+        })
+      }));
+      try {
+        localStorage.setItem('bonsai_cached_batches', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+
+    // 3. บันทึกลง editedTrainees เพื่อให้ filteredBatches อัปเดตรูปใหม่แทนรูปเดิมทันที
+    if (id) {
+      setEditedTrainees((prev) => {
+        const up = {
+          ...prev,
+          [id]: {
+            ...(prev[id] || {}),
+            image: newImage,
+            cropFocusX: cropData.x,
+            cropFocusY: cropData.y,
+            cropScale: cropData.scale
+          }
+        };
+        try {
+          localStorage.setItem('bonsai_edited_trainees', JSON.stringify(up));
+        } catch (e) {}
+        return up;
+      });
+    }
+
+    // 4. ซิงค์รูปที่ครอบแล้วไปยัง Google Sheets / Google Drive เบื้องหลัง
+    try {
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'saveTrainee',
+          id: trainee.id,
+          batch: trainee.batch ? trainee.batch.id : 1,
+          name: trainee.name,
+          nickname: trainee.nickname,
+          photoBase64: newImage && newImage.startsWith('data:') ? newImage : undefined,
+          cropFocusX: cropData.x,
+          cropFocusY: cropData.y,
+          cropScale: cropData.scale
+        })
+      })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.status === 'success' && resData.photoUrl) {
+          setEditedTrainees(prev => {
+            const up = { ...prev, [id]: { ...(prev[id] || {}), image: formatDriveImageUrl(resData.photoUrl) } };
+            try { localStorage.setItem('bonsai_edited_trainees', JSON.stringify(up)); } catch (e) {}
+            return up;
+          });
+        }
+      })
+      .catch(e => console.warn('Background sync crop notice:', e));
+    } catch (e) {}
+
+    setCropToast(`ครอบรูปและอัปเดตแทนรูปเดิมของ ${trainee.name || trainee.nickname || 'รูปนี้'} เรียบร้อยแล้ว`);
     setTimeout(() => setCropToast(null), 4500);
   };
 
   // รีเซ็ตจุดครอบรูปเฉพาะภาพนี้กลับเป็นค่าเริ่มต้น
-  const handleResetCustomCrop = (filename) => {
+  const handleResetCustomCrop = (trainee) => {
+    if (!trainee) return;
+    const id = trainee.id;
+    const rawFname = trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '');
+    const cleanFname = rawFname ? rawFname.split('?')[0].split('#')[0] : '';
+
     setCustomCropMap((prev) => {
       const updated = { ...prev };
-      delete updated[filename];
+      if (id) delete updated[id];
+      if (cleanFname) delete updated[cleanFname];
       try {
         localStorage.setItem('bonsai_custom_crops', JSON.stringify(updated));
       } catch (e) {}
       return updated;
     });
+
+    if (id) {
+      setEditedTrainees((prev) => {
+        const up = { ...prev };
+        if (up[id]) {
+          delete up[id].cropFocusX;
+          delete up[id].cropFocusY;
+          delete up[id].cropScale;
+        }
+        try {
+          localStorage.setItem('bonsai_edited_trainees', JSON.stringify(up));
+        } catch (e) {}
+        return up;
+      });
+    }
   };
 
   // บันทึกการแก้ไขข้อมูลผู้ผ่านการอบรม (อัปเดต LocalStorage และซิงค์ Google Sheets/Drive ทันที)
@@ -1243,7 +1772,7 @@ export default function BonsaiTraineeChart() {
     try {
       const foundT = allRawTrainees.find(item => item.id === traineeId) || {};
       const batchId = foundT.batch ? foundT.batch.id : 1;
-      const crop = customCropMap[foundT.filename] || FACE_FOCUS_MAP[foundT.filename] || { x: 50, y: 18, scale: 1.85 };
+      const crop = getTraineeCrop(foundT);
 
       fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
@@ -1337,7 +1866,7 @@ export default function BonsaiTraineeChart() {
             } catch (err) {}
           }
 
-          const crop = customCropMap[trainee.filename] || FACE_FOCUS_MAP[trainee.filename] || { x: 50, y: 18, scale: 1.85 };
+          const crop = getTraineeCrop(trainee);
 
           allToSync.push({
             id: trainee.id,
@@ -1412,6 +1941,50 @@ export default function BonsaiTraineeChart() {
     setTimeout(() => setCropToast(null), 4500);
   };
 
+  // สแกนและตรวจจับใบหน้าทุกรูปในรุ่นด้วย MediaPipe Face Detection ให้พอดีกับการ์ดอัตโนมัติ
+  const [isEnhancingAI, setIsEnhancingAI] = useState(false);
+  const handleAutoEnhanceAllWithAI = async () => {
+    if (isEnhancingAI) return;
+    setIsEnhancingAI(true);
+    setCropToast('⚡ AI MediaPipe กำลังสแกนและจัดตำแหน่งใบหน้าของทุกท่านให้พอดีกับการ์ด...');
+    
+    try {
+      let count = 0;
+      const updatedBatches = await Promise.all(
+        batches.map(async (batch) => {
+          const updatedTrainees = await Promise.all(
+            batch.trainees.map(async (t) => {
+              if (t.image && !t.image.startsWith('data:')) {
+                try {
+                  const res = await cropFaceWithMediaPipe(t.image);
+                  if (res.detected && res.cropBox) {
+                    count++;
+                    return {
+                      ...t,
+                      cropFocusX: res.cropBox.fxPercent,
+                      cropFocusY: res.cropBox.fyPercent
+                    };
+                  }
+                } catch (e) {}
+              }
+              return t;
+            })
+          );
+          return { ...batch, trainees: updatedTrainees };
+        })
+      );
+
+      setBatches(updatedBatches);
+      try { localStorage.setItem('bonsai_cached_batches', JSON.stringify(updatedBatches)); } catch (e) {}
+      setCropToast(`✓ AI MediaPipe จัดตำแหน่งใบหน้าผู้เข้าอบรม ${count} ท่านให้พอดีกับการ์ดเรียบร้อยแล้ว!`);
+      setTimeout(() => setCropToast(null), 5000);
+    } catch (e) {
+      console.warn('Auto AI enhance error:', e);
+    } finally {
+      setIsEnhancingAI(false);
+    }
+  };
+
   // กู้คืนรายชื่อทั้งหมด
   const handleRestoreAll = () => {
     setDeletedTraineeIds([]);
@@ -1423,18 +1996,11 @@ export default function BonsaiTraineeChart() {
     setTimeout(() => setCropToast(null), 4500);
   };
 
-  // บันทึกการเลือกธีมและโหมดครอบรูปลง LocalStorage
+  // บันทึกการเลือกธีมลง LocalStorage
   const handleThemeChange = (newTheme) => {
     setCardTheme(newTheme);
     try {
       localStorage.setItem('bonsai_theme_mode', newTheme);
-    } catch (e) {}
-  };
-
-  const handleCropModeChange = (newCrop) => {
-    setCropMode(newCrop);
-    try {
-      localStorage.setItem('bonsai_crop_mode', newCrop);
     } catch (e) {}
   };
 
@@ -1494,7 +2060,10 @@ export default function BonsaiTraineeChart() {
                       treeSpecies: 'บอนไซศิลปะสร้างสรรค์',
                       status: t.status || 'จบหลักสูตร',
                       certNo: t.certNo || `TBA-CERT-2026-0${batch.id}${String(index + 1).padStart(2, '0')}`,
-                      highlight: 'ผ่านการฝึกอบรมศิลปะการปลูกและสร้างสรรค์บอนไซ'
+                      highlight: 'ผ่านการฝึกอบรมศิลปะการปลูกและสร้างสรรค์บอนไซ',
+                      cropFocusX: (t.cropFocusX !== undefined && t.cropFocusX !== '' && !isNaN(Number(t.cropFocusX))) ? Number(t.cropFocusX) : undefined,
+                      cropFocusY: (t.cropFocusY !== undefined && t.cropFocusY !== '' && !isNaN(Number(t.cropFocusY))) ? Number(t.cropFocusY) : undefined,
+                      cropScale: (t.cropScale !== undefined && t.cropScale !== '' && !isNaN(Number(t.cropScale))) ? Number(t.cropScale) : undefined
                     };
                   });
 
@@ -1538,7 +2107,10 @@ export default function BonsaiTraineeChart() {
                     treeSpecies: 'บอนไซศิลปะสร้างสรรค์',
                     status: t.status || 'จบหลักสูตร',
                     certNo: t.certNo || `TBA-CERT-2026-0${batch.id}${String(index + 1).padStart(2, '0')}`,
-                    highlight: 'ผ่านการฝึกอบรมศิลปะการปลูกและสร้างสรรค์บอนไซ'
+                    highlight: 'ผ่านการฝึกอบรมศิลปะการปลูกและสร้างสรรค์บอนไซ',
+                    cropFocusX: (t.cropFocusX !== undefined && t.cropFocusX !== '' && !isNaN(Number(t.cropFocusX))) ? Number(t.cropFocusX) : undefined,
+                    cropFocusY: (t.cropFocusY !== undefined && t.cropFocusY !== '' && !isNaN(Number(t.cropFocusY))) ? Number(t.cropFocusY) : undefined,
+                    cropScale: (t.cropScale !== undefined && t.cropScale !== '' && !isNaN(Number(t.cropScale))) ? Number(t.cropScale) : undefined
                   };
                 });
 
@@ -1618,9 +2190,16 @@ export default function BonsaiTraineeChart() {
 
           imageFiles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-          const trainees = imageFiles.map((fname, index) =>
-            parseTraineeFromFilename(fname, index, batch.id)
-          );
+          const trainees = imageFiles.map((fname, index) => {
+            const tr = parseTraineeFromFilename(fname, index, batch.id);
+            const crop = (customCropMap && (customCropMap[tr.id] || customCropMap[fname])) || FACE_FOCUS_MAP[fname];
+            if (crop) {
+              tr.cropFocusX = crop.x;
+              tr.cropFocusY = crop.y;
+              tr.cropScale = crop.scale;
+            }
+            return tr;
+          });
 
           return {
             ...batch,
@@ -1714,26 +2293,32 @@ export default function BonsaiTraineeChart() {
       .filter((batch) => batch.trainees.length > 0);
   }, [batches, selectedBatchId, searchTerm, editedTrainees, deletedTraineeIds]);
 
-  // คำนวณ Style การครอบรูปภาพ (Face Auto-Crop + รองรับพิกัดที่กำหนดเองจากการกดเลือกบนรูป)
-  const getImageStyle = (filename) => {
-    if (cropMode === 'face') {
-      const custom = customCropMap[filename];
-      const focus = custom || FACE_FOCUS_MAP[filename] || { x: 50, y: 18, scale: 1.85 };
+  // คำนวณ Style การจัดวางรูปภาพให้อยู่กึ่งกลางการ์ดรูปภาพแบบ 100% (ไร้ขอบขาว ไม่มั่ว ตรงหน้าคนพอดี)
+  const getImageStyle = useCallback((trainee) => {
+    if (!trainee) return { width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' };
+    
+    // หากรูปภาพผ่านการครอบจริงแล้ว (Base64 หรือ Blob) ให้แสดงเต็มกรอบตรงกลาง 100% สวยงามทันที
+    if (trainee.image && (trainee.image.startsWith('data:') || trainee.image.startsWith('blob:'))) {
       return {
+        width: '100%',
+        height: '100%',
         objectFit: 'cover',
-        objectPosition: `${focus.x}% ${focus.y}%`,
-        transform: `scale(${focus.scale || 1.85})`,
-        transformOrigin: `${focus.x}% ${focus.y}%`,
-        transition: 'transform 0.35s ease, object-position 0.35s ease'
+        objectPosition: 'center'
       };
     }
+
+    const focus = getTraineeCrop(trainee);
+    const x = focus.x !== undefined ? focus.x : 50;
+    const y = focus.y !== undefined ? focus.y : 20;
+
     return {
+      width: '100%',
+      height: '100%',
       objectFit: 'cover',
-      objectPosition: 'center 15%',
-      transform: 'scale(1)',
-      transition: 'transform 0.35s ease, object-position 0.35s ease'
+      objectPosition: `${x}% ${y}%`,
+      transition: 'object-position 0.25s ease'
     };
-  };
+  }, [getTraineeCrop]);
 
   return (
     <div className={`min-h-screen font-sans pb-16 transition-colors duration-300 ${
@@ -1795,7 +2380,7 @@ export default function BonsaiTraineeChart() {
             
             {/* Logo & Title */}
             <div className="flex items-center gap-4 text-center md:text-left">
-              <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-2xl p-2 shadow-md border flex items-center justify-center shrink-0 ${
+              <div className={`w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shadow-md border flex items-center justify-center shrink-0 ${
                 cardTheme === 'wattvision'
                   ? 'bg-[#141414] border-[#2C2C2E]'
                   : cardTheme === 'poster'
@@ -1803,55 +2388,16 @@ export default function BonsaiTraineeChart() {
                   : 'bg-white border-emerald-200'
               }`}>
                 <img
-                  src="logo.png"
-                  alt="สมาคมบอนไซไทย"
-                  className="w-full h-full object-contain"
+                  src="bangkok-bonsai-logo.jpg"
+                  alt="บางกอกบอนไซ"
+                  className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.src = 'logo-card.png';
+                    e.target.onerror = null;
+                    e.target.src = 'logo.png';
                   }}
                 />
               </div>
               <div>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-1.5">
-                  <span className={`inline-block px-3 py-0.5 text-xs font-semibold rounded-full border ${
-                    cardTheme === 'wattvision'
-                      ? 'bg-[#141414] text-[#00E5FF] border-[#00E5FF]/40'
-                      : cardTheme === 'poster'
-                      ? 'bg-emerald-900/80 text-amber-300 border-emerald-700'
-                      : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                  }`}>
-                    <i className="fa-solid fa-graduation-cap mr-1"></i>
-                    Bangkok Bonsai Training Program
-                  </span>
-                  
-                  {/* Real-time Status Badge (Lime Green ตาม desig.md) */}
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full border ${
-                    cardTheme === 'wattvision'
-                      ? 'bg-[#17261C] text-[#32D74B] border-[#32D74B]/40'
-                      : cardTheme === 'poster'
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
-                      : 'bg-green-50 text-green-700 border-green-200'
-                  }`}>
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#32D74B] opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#32D74B]"></span>
-                    </span>
-                    Live Sync • แถวละ 5 คน
-                  </span>
-
-                  {/* Google Sheets & Drive Source Badge */}
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full border ${
-                    dataSource === 'google'
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300'
-                      : cardTheme === 'wattvision'
-                      ? 'bg-[#141414] text-[#00E5FF] border-[#2C2C2E]'
-                      : 'bg-sky-50 text-sky-700 border-sky-200'
-                  }`}>
-                    <i className={`fa-solid ${dataSource === 'google' ? 'fa-cloud text-emerald-500' : 'fa-folder-open text-sky-500'}`}></i>
-                    <span>{dataSource === 'google' ? 'Google Sheets & Drive' : 'โฟลเดอร์ภาพในเครื่อง'}</span>
-                  </span>
-                </div>
-
                 <h1 className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${
                   cardTheme === 'wattvision'
                     ? 'text-white'
@@ -1859,12 +2405,12 @@ export default function BonsaiTraineeChart() {
                     ? 'text-amber-300 drop-shadow'
                     : 'text-emerald-950'
                 }`}>
-                  ทำเนียบผู้อบรมบอนไซ บางกอกบอนไซ
+                  ทำเนียบผู้ผ่านการอบรมศิลปะบอนไซ
                 </h1>
                 <p className={`text-xs sm:text-sm mt-1 ${
                   cardTheme === 'wattvision' ? 'text-[#98989D]' : cardTheme === 'poster' ? 'text-emerald-200/90' : 'text-gray-600'
                 }`}>
-                  ทำเนียบผู้ผ่านการอบรมรุ่นที่ 1, รุ่นที่ 2, รุ่นที่ 3 • สมาคมบอนไซไทย
+                  สวนบางกอกบอนไซ ไร่อริยะ กาญจนบุรี • สมาคมบอนไซไทย
                 </p>
               </div>
             </div>
@@ -1903,6 +2449,25 @@ export default function BonsaiTraineeChart() {
               >
                 <i className={`fa-solid fa-arrows-rotate ${isScanning ? 'fa-spin' : ''}`}></i>
                 <span>{isScanning ? 'กำลังสแกน...' : 'รีเฟรช'}</span>
+              </button>
+
+              {/* AI MediaPipe Auto Enhance Button */}
+              <button
+                onClick={handleAutoEnhanceAllWithAI}
+                disabled={isEnhancingAI || isScanning}
+                className={`px-3.5 py-2.5 rounded-2xl text-xs font-semibold shadow-xs transition flex items-center gap-2 cursor-pointer disabled:opacity-50 border ${
+                  isEnhancingAI
+                    ? 'bg-amber-50 text-amber-800 border-amber-300 animate-pulse'
+                    : cardTheme === 'wattvision'
+                    ? 'bg-[#1E1E1E] hover:bg-[#252525] text-amber-400 border-[#2C2C2E] hover:border-amber-400'
+                    : cardTheme === 'poster'
+                    ? 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-emerald-700'
+                    : 'bg-amber-50/80 hover:bg-amber-100 text-amber-900 border-amber-300'
+                }`}
+                title="ใช้ AI MediaPipe ตรวจจับใบหน้าและจัดตำแหน่งรูปภาพทุกท่านให้พอดีกับการ์ดอัตโนมัติ"
+              >
+                <i className={`fa-solid ${isEnhancingAI ? 'fa-spinner fa-spin text-amber-500' : 'fa-wand-magic-sparkles text-amber-500'}`}></i>
+                <span>{isEnhancingAI ? 'กำลัง AI จัดภาพ...' : 'AI จัดตำแหน่งภาพทั้งหมด'}</span>
               </button>
 
               {/* Google Sheets & Drive Sync Button */}
@@ -2022,94 +2587,6 @@ export default function BonsaiTraineeChart() {
                 </button>
               )}
             </div>
-
-            {/* ฟังก์ชันครอบรูปภาพ: ครอบเฉพาะโซนหน้า (Auto Face Crop) vs ภาพเต็มตัว (ปิดชั่วคราว) */}
-            {/*
-            <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
-              cardTheme === 'wattvision'
-                ? 'bg-[#141414] border-[#2C2C2E]'
-                : cardTheme === 'poster'
-                ? 'bg-slate-900 border-emerald-700'
-                : 'bg-stone-100 border-gray-200'
-            }`}>
-              <button
-                onClick={() => handleCropModeChange('face')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  cropMode === 'face'
-                    ? cardTheme === 'wattvision'
-                      ? 'bg-[#00E5FF] text-[#121212] shadow-xs'
-                      : cardTheme === 'poster'
-                      ? 'bg-amber-400 text-slate-950 shadow-xs'
-                      : 'bg-emerald-800 text-white shadow-xs'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="ครอบรูปภาพอัตโนมัติ โฟกัสเฉพาะโซนหน้าขึ้นไป ได้สัดส่วนรูปถ่ายบุคคล"
-              >
-                <i className="fa-solid fa-user-tie"></i>
-                <span>ครอบโซนหน้า</span>
-              </button>
-              <button
-                onClick={() => handleCropModeChange('full')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                  cropMode === 'full'
-                    ? cardTheme === 'wattvision'
-                      ? 'bg-[#00E5FF] text-[#121212] font-bold shadow-xs'
-                      : cardTheme === 'poster'
-                      ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
-                      : 'bg-emerald-800 text-white font-bold shadow-xs'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="แสดงภาพเต็มตัวพร้อมต้นบอนไซ"
-              >
-                <i className="fa-solid fa-tree"></i>
-                <span>ภาพเต็ม</span>
-              </button>
-            </div>
-            */}
-
-            {/* ปุ่มย่อขนาดการ์ด: กะทัดรัด (ย่อสั้น) vs ปกติ (ปิดชั่วคราว) */}
-            {/*
-            <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
-              cardTheme === 'wattvision'
-                ? 'bg-[#141414] border-[#2C2C2E]'
-                : cardTheme === 'poster'
-                ? 'bg-slate-900 border-emerald-700'
-                : 'bg-stone-100 border-gray-200'
-            }`}>
-              <button
-                onClick={() => setCardSize('compact')}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                  cardSize === 'compact'
-                    ? cardTheme === 'wattvision'
-                      ? 'bg-[#00E5FF] text-[#121212] shadow-xs'
-                      : cardTheme === 'poster'
-                      ? 'bg-amber-400 text-slate-950 shadow-xs'
-                      : 'bg-emerald-800 text-white shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-                title="ย่อขนาดการ์ดรูปคนให้สั้นลง กะทัดรัด สบายตา"
-              >
-                <i className="fa-solid fa-compress text-[11px]"></i>
-                <span>การ์ดย่อสั้น</span>
-              </button>
-              <button
-                onClick={() => setCardSize('normal')}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
-                  cardSize === 'normal'
-                    ? cardTheme === 'wattvision'
-                      ? 'bg-[#00E5FF] text-[#121212] font-bold shadow-xs'
-                      : cardTheme === 'poster'
-                      ? 'bg-amber-400 text-slate-950 font-bold shadow-xs'
-                      : 'bg-emerald-800 text-white font-bold shadow-xs'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-                title="ขนาดการ์ดทรงยาวปกติ"
-              >
-                <i className="fa-solid fa-expand text-[11px]"></i>
-                <span>ปกติ</span>
-              </button>
-            </div>
-            */}
 
             {/* โหมดเมื่อกดที่รูปภาพ: กดรูปเพื่อครอบ (Interactive Crop) vs ดูประวัติ */}
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
@@ -2327,11 +2804,6 @@ export default function BonsaiTraineeChart() {
                       }`}>
                         [{batch.batchCode}]
                       </span>
-                      <span className={`text-xs ${cardTheme === 'wattvision' ? 'text-[#98989D]' : 'opacity-70'}`}>
-                        • โฟลเดอร์: <code className={`px-2 py-0.5 rounded text-[11px] font-mono ${
-                          cardTheme === 'wattvision' ? 'bg-[#141414] text-[#00E5FF] border border-[#2C2C2E]' : 'bg-emerald-950 text-emerald-300'
-                        }`}>{batch.folder}/</code>
-                      </span>
                       <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${
                         cardTheme === 'wattvision'
                           ? 'bg-[#17261C] text-[#32D74B] border-[#32D74B]/40'
@@ -2339,15 +2811,8 @@ export default function BonsaiTraineeChart() {
                           ? 'bg-emerald-900/60 text-emerald-300 border-emerald-700/60'
                           : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       }`}>
-                        <i className="fa-solid fa-grip mr-1"></i> แถวละ 5 ท่าน ({batch.trainees.length} รูป)
+                        <i className="fa-solid fa-users mr-1"></i> ผู้ผ่านการอบรม {batch.trainees.length} ท่าน
                       </span>
-                      {cropMode === 'face' && (
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                          cardTheme === 'wattvision' ? 'bg-[#141414] text-[#00E5FF] border-[#00E5FF]/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                        }`}>
-                          <i className="fa-solid fa-crop-simple mr-1"></i> ครอบโซนหน้าอัตโนมัติ
-                        </span>
-                      )}
                     </div>
                     <h2 className={`text-xl sm:text-2xl font-black tracking-tight ${
                       cardTheme === 'wattvision' ? 'text-white' : cardTheme === 'poster' ? 'text-amber-300 drop-shadow-xs' : 'text-emerald-950'
@@ -2416,10 +2881,8 @@ export default function BonsaiTraineeChart() {
                         }`}
                         style={cardTheme === 'wattvision' ? { borderRadius: '16px' } : {}}
                       >
-                        {/* Trainee Card Top Photo (ย่อขนาดให้สั้นลง กะทัดรัด สบายตา) */}
-                        <div className={`relative overflow-hidden ${
-                          cardSize === 'compact' ? 'aspect-[4/3.1]' : 'aspect-[3/4]'
-                        } ${
+                        {/* Trainee Card Top Photo (สัดส่วน 4:3.2 สั้นลง กระชับ เข้ากับใบหน้าพอดี) */}
+                        <div className={`relative overflow-hidden aspect-[4/3.2] ${
                           cardTheme === 'poster' ? 'rounded-t-[2rem]' : 'rounded-t-xl'
                         } ${
                           cardTheme === 'wattvision'
@@ -2440,7 +2903,7 @@ export default function BonsaiTraineeChart() {
                           <img
                             src={formatDriveImageUrl(trainee.image)}
                             alt={trainee.name}
-                            style={getImageStyle(trainee.filename || (trainee.image ? trainee.image.split('/').pop() : ''))}
+                            style={getImageStyle(trainee)}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.target.onerror = null;
@@ -2457,8 +2920,8 @@ export default function BonsaiTraineeChart() {
                               : 'from-black/15 to-transparent'
                           }`}></div>
 
-                          {/* Quick Action Buttons (Edit & Delete) on Card */}
-                          <div className="absolute top-1.5 left-1.5 z-30 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Quick Action Top Bar (Edit, Crop & Delete) on Card */}
+                          <div className="absolute top-1.5 left-1.5 z-30 flex items-center gap-1">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2466,7 +2929,7 @@ export default function BonsaiTraineeChart() {
                                 setEditingTrainee(trainee);
                               }}
                               className="w-7 h-7 rounded-lg bg-black/85 hover:bg-emerald-600 text-white backdrop-blur-xs border border-white/20 transition-all flex items-center justify-center shadow-md cursor-pointer hover:scale-110"
-                              title="แก้ไขข้อมูล / อัปเดตรูปถ่ายคนนี้"
+                              title="แก้ไขข้อมูล / เปลี่ยนรูปถ่ายคนนี้"
                             >
                               <i className="fa-solid fa-pen text-[10px] text-emerald-300"></i>
                             </button>
@@ -2476,7 +2939,7 @@ export default function BonsaiTraineeChart() {
                                 e.stopPropagation();
                                 setDeletingTrainee(trainee);
                               }}
-                              className="w-7 h-7 rounded-lg bg-black/85 hover:bg-rose-600 text-white backdrop-blur-xs border border-white/20 transition-all flex items-center justify-center shadow-md cursor-pointer hover:scale-110"
+                              className="w-7 h-7 rounded-lg bg-black/85 hover:bg-rose-600 text-white backdrop-blur-xs border border-white/20 transition-all flex items-center justify-center shadow-md cursor-pointer hover:scale-110 opacity-70 hover:opacity-100"
                               title="ลบคนนี้ออกจากทำเนียบ"
                             >
                               <i className="fa-solid fa-trash-can text-[10px] text-rose-300"></i>
@@ -2484,10 +2947,10 @@ export default function BonsaiTraineeChart() {
                           </div>
 
                           {/* Custom Crop Active Badge */}
-                          {customCropMap[trainee.filename || (trainee.image ? trainee.image.split('/').pop() : '')] && (
+                          {(customCropMap[trainee.id] || customCropMap[trainee.filename] || (trainee.cropFocusX !== undefined && trainee.cropFocusX !== '')) && (
                             <div className="absolute bottom-1.5 right-1.5 z-20 px-1.5 py-0.5 bg-emerald-950/85 text-emerald-300 text-[9px] font-bold rounded-md backdrop-blur-xs border border-emerald-500/40 flex items-center gap-1 shadow-sm">
                               <i className="fa-solid fa-check text-emerald-400"></i>
-                              <span>กำหนดเอง</span>
+                              <span>ปรับแล้ว</span>
                             </div>
                           )}
 
@@ -2502,6 +2965,7 @@ export default function BonsaiTraineeChart() {
                             title="คลิกเพื่อเลือกจุดครอบรูปภาพนี้เอง"
                           >
                             <i className="fa-solid fa-crop-simple text-amber-300"></i>
+                            <span>ครอป</span>
                           </button>
 
                           {/* Click-to-Crop Overlay Hint on Hover */}
@@ -2509,14 +2973,14 @@ export default function BonsaiTraineeChart() {
                             <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center pointer-events-none">
                               <span className="px-2.5 py-1 bg-black/85 text-amber-300 text-xs font-bold rounded-xl shadow-lg border border-amber-400/40 flex items-center gap-1.5">
                                 <i className="fa-solid fa-crosshairs"></i>
-                                <span>คลิกเลือกจุดครอบ</span>
+                                <span>คลิกปรับตำแหน่งภาพ</span>
                               </span>
                             </div>
                           )}
                         </div>
 
-                        {/* Trainee Details Bottom: กระชับ ไม่ยืดยาว แสดงเฉพาะชื่อจริง และชื่อเล่น */}
-                        <div className={`p-2 sm:p-2.5 text-center border-t flex flex-col justify-center min-h-[48px] ${
+                        {/* Trainee Details Bottom: กระชับ ชัดเจน มีปุ่มแก้ไขรูปภาพในตัว */}
+                        <div className={`p-2.5 text-center border-t flex flex-col justify-between ${
                           cardTheme === 'wattvision'
                             ? 'bg-[#1E1E1E] border-[#2C2C2E]'
                             : cardTheme === 'poster'
@@ -2543,6 +3007,46 @@ export default function BonsaiTraineeChart() {
                               : 'text-emerald-700'
                           }`}>
                             ({trainee.nickname})
+                          </div>
+
+                          {/* ปุ่มแก้ไขรูปภาพ / ครอปรูปภาพ */}
+                          <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-[#2C2C2E]/60 flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTrainee(trainee);
+                              }}
+                              className={`flex-1 py-1 px-2 text-[11px] font-semibold rounded-lg transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs ${
+                                cardTheme === 'wattvision'
+                                  ? 'bg-[#141414] hover:bg-[#252525] text-[#00E5FF] border border-[#2C2C2E]'
+                                  : cardTheme === 'poster'
+                                  ? 'bg-emerald-950/80 hover:bg-emerald-900 text-amber-300 border border-emerald-700/60'
+                                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}
+                              title="แก้ไขชื่อ หรือเปลี่ยนรูปถ่ายใหม่"
+                            >
+                              <i className="fa-solid fa-user-pen text-[10px]"></i>
+                              <span>แก้ไขรูป</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCroppingTrainee(trainee);
+                              }}
+                              className={`py-1 px-2 text-[11px] font-semibold rounded-lg transition flex items-center justify-center gap-1 cursor-pointer shadow-2xs ${
+                                cardTheme === 'wattvision'
+                                  ? 'bg-[#141414] hover:bg-[#252525] text-amber-400 border border-[#2C2C2E]'
+                                  : cardTheme === 'poster'
+                                  ? 'bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-emerald-800'
+                                  : 'bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200'
+                              }`}
+                              title="ปรับจุดโฟกัส / ครอปรูป"
+                            >
+                              <i className="fa-solid fa-crop-simple text-[10px]"></i>
+                              <span>ครอป</span>
+                            </button>
                           </div>
                         </div>
 
@@ -2589,15 +3093,17 @@ export default function BonsaiTraineeChart() {
                               : 'bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-300'
                           }`}
                         >
-                          <img
-                            src={leader.image}
-                            alt={leader.name}
-                            style={getImageStyle(leader.filename || leader.image.split('/').pop())}
-                            className={`w-12 h-12 rounded-full object-cover border-2 shadow-2xs ${
-                              cardTheme === 'wattvision' ? 'border-[#00E5FF]' : 'border-emerald-400'
-                            }`}
-                            onError={(e) => { e.target.src = 'sample-member.jpg'; }}
-                          />
+                          <div className={`w-12 h-12 rounded-full overflow-hidden relative border-2 shadow-2xs shrink-0 ${
+                            cardTheme === 'wattvision' ? 'border-[#00E5FF]' : 'border-emerald-400'
+                          }`}>
+                            <img
+                              src={leader.image}
+                              alt={leader.name}
+                              style={getImageStyle(leader)}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.src = 'sample-member.jpg'; }}
+                            />
+                          </div>
                           <div>
                             <span className={`px-2 py-0.5 font-bold text-[10px] rounded-full ${
                               cardTheme === 'wattvision' ? 'bg-[#00E5FF] text-[#121212]' : 'bg-emerald-700 text-white'
@@ -2634,15 +3140,17 @@ export default function BonsaiTraineeChart() {
                               : 'bg-white hover:bg-emerald-50 border-gray-200 hover:border-emerald-400'
                           }`}
                         >
-                          <img
-                            src={trainee.image}
-                            alt={trainee.name}
-                            style={getImageStyle(trainee.filename || trainee.image.split('/').pop())}
-                            className={`w-10 h-10 rounded-full object-cover border shrink-0 ${
-                              cardTheme === 'wattvision' ? 'border-[#00E5FF]/50' : 'border-emerald-200'
-                            }`}
-                            onError={(e) => { e.target.src = 'sample-member.jpg'; }}
-                          />
+                          <div className={`w-10 h-10 rounded-full overflow-hidden relative border shrink-0 ${
+                            cardTheme === 'wattvision' ? 'border-[#00E5FF]/50' : 'border-emerald-200'
+                          }`}>
+                            <img
+                              src={trainee.image}
+                              alt={trainee.name}
+                              style={getImageStyle(trainee)}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.src = 'sample-member.jpg'; }}
+                            />
+                          </div>
                           <div className="overflow-hidden text-left">
                             <div className="text-xs font-bold truncate">{trainee.name}</div>
                             <div className={`text-[11px] truncate ${cardTheme === 'wattvision' ? 'text-[#00E5FF]' : 'text-emerald-700'}`}>
@@ -2669,7 +3177,7 @@ export default function BonsaiTraineeChart() {
                   <i className={`fa-solid fa-folder-open ${cardTheme === 'wattvision' ? 'text-[#00E5FF]' : 'text-emerald-500'}`}></i>
                   <span>ตำแหน่งโฟลเดอร์: <code className={`font-semibold ${cardTheme === 'wattvision' ? 'text-[#00E5FF]' : cardTheme === 'poster' ? 'text-amber-300' : 'text-gray-700'}`}>{batch.folder}/</code></span>
                   <span className={`${cardTheme === 'wattvision' ? 'text-[#32D74B]' : 'text-emerald-400'} font-medium`}>
-                    • {cropMode === 'face' ? 'ครอบเฉพาะโซนหน้าอัตโนมัติ' : 'แสดงภาพเต็ม'} (แถวละ 5 ท่าน)
+                    • รูปภาพสัดส่วนบุคคล 3:4 มาตรฐาน (แถวละ 5 ท่าน)
                   </span>
                 </div>
                 <div className={`font-bold ${cardTheme === 'wattvision' ? 'text-[#00E5FF]' : cardTheme === 'poster' ? 'text-amber-300' : 'text-emerald-900'}`}>
@@ -2733,7 +3241,7 @@ export default function BonsaiTraineeChart() {
                   <img
                     src={formatDriveImageUrl(selectedTrainee.image)}
                     alt={selectedTrainee.name}
-                    style={getImageStyle(selectedTrainee.filename || (selectedTrainee.image ? selectedTrainee.image.split('/').pop() : ''))}
+                    style={getImageStyle(selectedTrainee)}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.target.src = 'sample-member.jpg'; }}
                   />
@@ -2872,24 +3380,17 @@ export default function BonsaiTraineeChart() {
         <CropEditorModal
           trainee={croppingTrainee}
           cardTheme={cardTheme}
-          cardSize={cardSize}
-          currentCrop={
-            customCropMap[croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '')] ||
-            FACE_FOCUS_MAP[croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '')] ||
-            { x: 50, y: 18, scale: 1.85 }
-          }
+          currentCrop={getTraineeCrop(croppingTrainee)}
           defaultCrop={
-            FACE_FOCUS_MAP[croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '')] ||
-            { x: 50, y: 18, scale: 1.85 }
+            FACE_FOCUS_MAP[croppingTrainee.filename ? croppingTrainee.filename.split('?')[0].split('#')[0] : (croppingTrainee.image ? croppingTrainee.image.split('/').pop().split('?')[0] : '')] ||
+            { x: 50, y: 25, scale: 1.85 }
           }
           onSave={(cropData) => {
-            const fname = croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '');
-            handleSaveCustomCrop(fname, cropData);
+            handleSaveCustomCrop(croppingTrainee, cropData);
             setCroppingTrainee(null);
           }}
           onReset={() => {
-            const fname = croppingTrainee.filename || (croppingTrainee.image ? croppingTrainee.image.split('/').pop() : '');
-            handleResetCustomCrop(fname);
+            handleResetCustomCrop(croppingTrainee);
           }}
           onClose={() => setCroppingTrainee(null)}
         />

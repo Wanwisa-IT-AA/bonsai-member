@@ -203,12 +203,12 @@
             >
               <i class="fa-solid fa-file-invoice-dollar mr-1"></i> แจ้งชำระเงิน
             </button>
-            <!-- <button
+            <button
               onclick="app.navigate('status')"
               class="nav-btn nav-status px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition"
             >
               <i class="fa-solid fa-magnifying-glass mr-1"></i> ตรวจสอบสถานะ
-            </button> -->
+            </button>
             <button
               onclick="app.navigate('manual')"
               class="nav-btn nav-manual px-3 py-2 rounded-md text-sm hover:text-bonsai-600 hover:bg-bonsai-50 transition font-medium"
@@ -612,28 +612,13 @@
               <!-- Soft atmospheric glow aura -->
               <div class="absolute inset-0 bg-gradient-to-b from-emerald-100/50 via-amber-50/20 to-transparent rounded-3xl -z-10 filter blur-3xl transform scale-95 pointer-events-none"></div>
 
-              <!-- 1. โลโก้กลมกลืน ไร้ขอบสี่เหลี่ยมโผล่ พร้อมขอบสามมิติ (3D Beveled Medallion) -->
+              <!-- 1. โลโก้สมาคมบอนไซไทย ไร้ขอบ โชว์เฉพาะรูปภาพล้วน ขยายขนาดใหญ่ขึ้น -->
               <div class="flex flex-col items-center mb-1 sm:mb-2 pt-1 z-10">
-                <div
-                  class="w-40 h-40 sm:w-48 sm:h-48 md:w-52 md:h-52 bg-white rounded-full overflow-hidden flex items-center justify-center p-5 sm:p-6 transition-all duration-300 hover:scale-105 relative"
-                  style="
-                    border: 4px solid #10b981;
-                    box-shadow: 
-                      0 12px 24px -4px rgba(0, 0, 0, 0.14),
-                      0 4px 10px -2px rgba(16, 185, 129, 0.2),
-                      0 0 0 2px #ecfdf5,
-                      0 0 0 4px rgba(16, 185, 129, 0.25),
-                      inset 0 2px 5px rgba(255, 255, 255, 0.95),
-                      inset 0 -3px 6px rgba(4, 120, 87, 0.25);
-                  "
-                >
-                  <img
-                    src="logo.png"
-                    alt="สมาคมบอนไซไทย"
-                    class="max-w-[90%] max-h-[90%] object-contain select-none"
-                    style="mix-blend-mode: multiply;"
-                  />
-                </div>
+                <img
+                  src="logo.png"
+                  alt="สมาคมบอนไซไทย"
+                  class="w-48 sm:w-60 md:w-68 lg:w-72 h-auto object-contain select-none transition-transform duration-300 hover:scale-105 drop-shadow-md"
+                />
               </div>
 
               <!-- 2. รูปคนและบอนไซขยายขนาดใหญ่ขึ้น ชิดขอบล่างสุดของกรอบ -->
@@ -1390,12 +1375,21 @@
               ตรวจสอบสลิปและอนุมัติสถานะสมาชิก
             </p>
           </div>
-          <button
-            onclick="app.fetchMembersFromApi()"
-            class="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm hover:shadow cursor-pointer"
-          >
-            <i class="fa-solid fa-rotate"></i> โหลดข้อมูลใหม่
-          </button>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <button
+              onclick="app.exportMembersToExcel()"
+              class="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm hover:shadow cursor-pointer"
+              title="ดาวน์โหลดรายชื่อสมาชิกทั้งหมดลงไฟล์ Excel (.csv)"
+            >
+              <i class="fa-solid fa-file-excel text-base text-emerald-200"></i> ดาวน์โหลด Excel
+            </button>
+            <button
+              onclick="app.fetchMembersFromApi()"
+              class="inline-flex items-center gap-2 bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm hover:shadow cursor-pointer"
+            >
+              <i class="fa-solid fa-rotate"></i> โหลดข้อมูลใหม่
+            </button>
+          </div>
         </div>
 
         <!-- Admin Search Bar -->
@@ -3528,6 +3522,93 @@
               btnElement.classList.remove("opacity-75", "cursor-not-allowed");
             }
           }
+        },
+
+        exportMembersToExcel: function () {
+          if (!this.members || this.members.length === 0) {
+            this.showToast("ไม่มีข้อมูลสมาชิกในระบบสำหรับดาวน์โหลด", "warning");
+            return;
+          }
+
+          // คอลัมน์หัวตาราง Excel
+          const headers = [
+            "ลำดับ",
+            "รหัสสมาชิก",
+            "ชื่อ",
+            "นามสกุล",
+            "ชื่อเล่น",
+            "เบอร์โทรศัพท์",
+            "เลขบัตรประชาชน",
+            "จังหวัด",
+            "วันที่สมัคร/ออกบัตร",
+            "วันหมดอายุ",
+            "ประเภทสมาชิก",
+            "สถานะ",
+            "ยินยอมเงื่อนไข PDPA",
+            "วันเวลาที่ยินยอม PDPA",
+            "ลิงก์รูปถ่าย",
+            "ลิงก์สลิปการโอน"
+          ];
+
+          const escapeCSV = (val) => {
+            if (val === null || val === undefined) return '""';
+            let str = String(val).replace(/"/g, '""');
+            return `"${str}"`;
+          };
+
+          // รูปแบบสูตร Excel เพื่อรักษาเลข 0 นำหน้าเบอร์โทร และป้องกันเลขบัตร ปชช. กลายเป็น Scientific Notation
+          const textCell = (val) => {
+            if (!val) return '""';
+            let clean = String(val).trim().replace(/"/g, '""');
+            return `="""${clean}"""`;
+          };
+
+          const rows = this.members.map((m, idx) => {
+            const isActive =
+              m.status === "active" ||
+              m.status === "อนุมัติแล้ว" ||
+              m.status === "ใช้งานอยู่";
+            const statusText = isActive ? "อนุมัติแล้ว" : "รอตรวจสอบ";
+            const phone = m.phone ? String(m.phone).trim() : "";
+            const idCard = m.idCard ? String(m.idCard).trim() : "";
+            const issueDate = m.issueDate || m.joinDate || "";
+            const expireDate = m.expireDate || "";
+
+            return [
+              idx + 1,
+              textCell(m.id || ""),
+              escapeCSV(m.firstName || ""),
+              escapeCSV(m.lastName || ""),
+              escapeCSV(m.nickname || ""),
+              textCell(phone),
+              textCell(idCard),
+              escapeCSV(m.province || ""),
+              escapeCSV(issueDate),
+              escapeCSV(expireDate),
+              escapeCSV(m.type || "ทั่วไป"),
+              escapeCSV(statusText),
+              escapeCSV(m.pdpaConsent || "ยินยอม"),
+              escapeCSV(m.pdpaConsentDate || ""),
+              escapeCSV(m.photoUrl || ""),
+              escapeCSV(m.slipUrl || "")
+            ].join(",");
+          });
+
+          // ใช้ UTF-8 BOM (\uFEFF) เพื่อให้ Microsoft Excel เปิดภาษาไทยได้คมชัด ถูกต้อง 100% ไม่เป็นภาษาต่างดาว
+          const csvContent = "\uFEFF" + [headers.map(escapeCSV).join(","), ...rows].join("\r\n");
+          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          const now = new Date();
+          const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+          link.setAttribute("href", url);
+          link.setAttribute("download", `ข้อมูลสมาชิกสมาคมบอนไซไทย_${dateStr}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+
+          this.showToast(`ดาวน์โหลดข้อมูลสมาชิกทั้งหมด ${this.members.length} ท่านลงไฟล์ Excel สำเร็จเรียบร้อย!`, "success");
         },
       };
 
