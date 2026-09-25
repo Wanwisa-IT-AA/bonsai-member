@@ -221,16 +221,16 @@ export default function BonsaiTraineeChart() {
   }, [selectedBatchId, searchTerm]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 via-emerald-50/20 to-stone-100 text-gray-800 font-sans pb-16">
+    <div className="min-h-screen bg-[#f8faf8] text-gray-800 font-sans pb-16">
       
-      {/* 1. Header Banner */}
-      <header className="bg-gradient-to-r from-emerald-950 via-emerald-900 to-green-950 text-white shadow-xl border-b-4 border-emerald-600">
+      {/* 1. Header Banner - โทนสว่าง สบายตา ไม่ทึบ */}
+      <header className="bg-gradient-to-b from-white via-emerald-50/40 to-white text-gray-800 shadow-xs border-b border-emerald-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             
             {/* Logo & Title */}
             <div className="flex items-center gap-4 text-center md:text-left">
-              <div className="w-20 h-20 bg-white rounded-full p-2 shadow-lg border-2 border-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-18 h-18 sm:w-20 sm:h-20 bg-white rounded-full p-2 shadow-sm border-2 border-emerald-200 flex items-center justify-center shrink-0">
                 <img
                   src="logo.png"
                   alt="สมาคมบอนไซไทย"
@@ -241,32 +241,32 @@ export default function BonsaiTraineeChart() {
                 />
               </div>
               <div>
-                <span className="inline-block px-3 py-1 bg-emerald-800/80 text-emerald-300 text-xs font-semibold rounded-full border border-emerald-700/60 mb-2">
-                  <i className="fa-solid fa-graduation-cap mr-1.5"></i>
+                <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full border border-emerald-200 mb-2">
+                  <i className="fa-solid fa-graduation-cap mr-1.5 text-emerald-600"></i>
                   Bangkok Bonsai Training Program
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-sm">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-950">
                   แผนผังผู้ผ่านการอบรมศิลปะบอนไซ
                 </h1>
-                <p className="text-sm text-emerald-200 mt-1">
-                  สมาคมบอนไซไทย (Thai Bonsai Association) • ทำเนียบรุ่นและผลงานสร้างสรรค์
+                <p className="text-sm text-gray-600 mt-1">
+                  สมาคมบอนไซไทย (Thai Bonsai Association) • ทำเนียบรุ่นและผู้เข้าร่วมอบรม
                 </p>
               </div>
             </div>
 
-            {/* Quick Stats Badges */}
+            {/* Quick Stats Badges - โทนสบายตา */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="bg-emerald-800/60 backdrop-blur-sm border border-emerald-700/60 px-4 py-2.5 rounded-xl text-center shadow-sm">
-                <div className="text-2xl font-black text-amber-300">{BATCH_DATA.length}</div>
-                <div className="text-[11px] text-emerald-200">รุ่นที่เปิดอบรม</div>
+              <div className="bg-white border border-emerald-200/90 px-4 py-2 rounded-2xl text-center shadow-xs">
+                <div className="text-2xl font-black text-emerald-700">{BATCH_DATA.length}</div>
+                <div className="text-[11px] text-gray-500 font-medium">รุ่นที่เปิดอบรม</div>
               </div>
-              <div className="bg-emerald-800/60 backdrop-blur-sm border border-emerald-700/60 px-4 py-2.5 rounded-xl text-center shadow-sm">
-                <div className="text-2xl font-black text-emerald-300">{totalTrainees}</div>
-                <div className="text-[11px] text-emerald-200">ผู้ผ่านการอบรมรวม</div>
+              <div className="bg-white border border-emerald-200/90 px-4 py-2 rounded-2xl text-center shadow-xs">
+                <div className="text-2xl font-black text-emerald-700">{totalTrainees}</div>
+                <div className="text-[11px] text-gray-500 font-medium">ผู้ผ่านการอบรมรวม</div>
               </div>
-              <div className="bg-emerald-800/60 backdrop-blur-sm border border-emerald-700/60 px-4 py-2.5 rounded-xl text-center shadow-sm">
-                <div className="text-2xl font-black text-white">100%</div>
-                <div className="text-[11px] text-emerald-200">ได้รับประกาศนียบัตร</div>
+              <div className="bg-white border border-emerald-200/90 px-4 py-2 rounded-2xl text-center shadow-xs">
+                <div className="text-2xl font-black text-emerald-600">100%</div>
+                <div className="text-[11px] text-gray-500 font-medium">สำเร็จการอบรม</div>
               </div>
             </div>
 
@@ -275,8 +275,8 @@ export default function BonsaiTraineeChart() {
       </header>
 
       {/* 2. Control Bar (Filter & Search) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200/80 p-4 sm:p-5 flex flex-col lg:flex-row items-center justify-between gap-4">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-emerald-100/90 p-4 sm:p-5 flex flex-col lg:flex-row items-center justify-between gap-4">
           
           {/* Tabs เลือกดูเป็นรุ่นๆ */}
           <div className="flex flex-wrap items-center gap-1.5 w-full lg:w-auto">
@@ -284,8 +284,8 @@ export default function BonsaiTraineeChart() {
               onClick={() => setSelectedBatchId('all')}
               className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 selectedBatchId === 'all'
-                  ? 'bg-emerald-800 text-white shadow-md'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-emerald-50/70 hover:bg-emerald-100/70 text-emerald-900'
               }`}
             >
               <i className="fa-solid fa-layer-group"></i> ทุกรุ่น ({totalTrainees})
@@ -296,7 +296,7 @@ export default function BonsaiTraineeChart() {
                 onClick={() => setSelectedBatchId(b.id)}
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-1.5 cursor-pointer ${
                   selectedBatchId === b.id
-                    ? 'bg-emerald-700 text-white shadow-md'
+                    ? 'bg-emerald-700 text-white shadow-xs'
                     : 'bg-gray-100 hover:bg-emerald-50 text-gray-700 hover:text-emerald-800'
                 }`}
               >
@@ -315,7 +315,7 @@ export default function BonsaiTraineeChart() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ค้นหาชื่อ, รหัส, พันธุ์ไม้..."
+                placeholder="ค้นหาชื่อ, ชื่อเล่น, รหัส..."
                 className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
               />
               {searchTerm && (
@@ -360,9 +360,9 @@ export default function BonsaiTraineeChart() {
       </section>
 
       {/* 3. Main Content: Trainee Roster by Batch */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-10">
         {filteredBatches.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-200 my-8">
+          <div className="bg-white rounded-3xl p-12 text-center shadow-xs border border-gray-200 my-8">
             <div className="w-16 h-16 mx-auto mb-4 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl">
               <i className="fa-solid fa-user-slash"></i>
             </div>
@@ -373,7 +373,7 @@ export default function BonsaiTraineeChart() {
                 setSearchTerm('');
                 setSelectedBatchId('all');
               }}
-              className="mt-4 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition"
+              className="mt-4 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition cursor-pointer"
             >
               แสดงข้อมูลทั้งหมด
             </button>
@@ -382,44 +382,44 @@ export default function BonsaiTraineeChart() {
           filteredBatches.map((batch) => (
             <section
               key={batch.id}
-              className="bg-white rounded-3xl shadow-md border border-gray-200/90 overflow-hidden transition-all hover:shadow-lg"
+              className="bg-white rounded-3xl shadow-sm border border-emerald-100/90 overflow-hidden transition-all hover:shadow-md"
             >
-              {/* Batch Banner Header */}
-              <div className="relative px-6 sm:px-8 py-6 bg-gradient-to-r from-emerald-900 via-emerald-800 to-green-900 text-white">
+              {/* Batch Banner Header - สว่าง สบายตา */}
+              <div className="px-6 sm:px-8 py-5 bg-gradient-to-r from-emerald-50/90 via-white to-emerald-50/50 border-b border-emerald-100 text-gray-800">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-3 py-1 bg-amber-400 text-amber-950 font-black text-xs rounded-full shadow-xs">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="px-3 py-1 bg-emerald-700 text-white font-bold text-xs rounded-full shadow-2xs">
                         {batch.batchNumber}
                       </span>
-                      <span className="text-xs text-emerald-200 font-mono tracking-wider">
+                      <span className="text-xs text-emerald-800 font-mono font-semibold">
                         [{batch.batchCode}]
                       </span>
-                      <span className="text-xs text-emerald-200">
-                        • โฟลเดอร์รูปภาพ: <code className="bg-emerald-950/60 px-2 py-0.5 rounded text-amber-200">{batch.folder}</code>
+                      <span className="text-xs text-gray-500">
+                        • โฟลเดอร์รูปภาพ: <code className="bg-emerald-100/70 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-mono">{batch.folder}</code>
                       </span>
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-950">
                       {batch.title}
                     </h2>
-                    <p className="text-xs sm:text-sm text-emerald-200 mt-1 max-w-2xl">
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1 max-w-2xl">
                       {batch.description}
                     </p>
                   </div>
 
                   {/* Batch Details (Date, Location, Instructor) */}
-                  <div className="bg-emerald-950/60 border border-emerald-700/50 rounded-2xl p-3.5 text-xs space-y-1 md:min-w-[280px]">
-                    <div className="flex items-center gap-2 text-emerald-200">
-                      <i className="fa-solid fa-calendar-days text-amber-300 w-4 text-center"></i>
+                  <div className="bg-white border border-emerald-200/80 rounded-2xl p-3 text-xs space-y-1 md:min-w-[270px] shadow-2xs">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <i className="fa-solid fa-calendar-days text-emerald-600 w-4 text-center"></i>
                       <span>{batch.date}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-emerald-200">
-                      <i className="fa-solid fa-location-dot text-amber-300 w-4 text-center"></i>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <i className="fa-solid fa-location-dot text-emerald-600 w-4 text-center"></i>
                       <span>{batch.location}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-emerald-200">
-                      <i className="fa-solid fa-chalkboard-user text-amber-300 w-4 text-center"></i>
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <i className="fa-solid fa-chalkboard-user text-emerald-600 w-4 text-center"></i>
                       <span className="truncate">วิทยากร: {batch.instructor}</span>
                     </div>
                   </div>
@@ -427,79 +427,37 @@ export default function BonsaiTraineeChart() {
                 </div>
               </div>
 
-              {/* View 1: Cards View */}
+              {/* View 1: Cards View - สะอาดตา เอาคำบรรยายออก เหลือแต่ชื่อจริง และชื่อเล่น */}
               {viewMode === 'cards' ? (
                 <div className="p-6 sm:p-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
                     {batch.trainees.map((trainee) => (
                       <div
                         key={trainee.id}
                         onClick={() => setSelectedTrainee({ ...trainee, batch })}
-                        className="group bg-stone-50/70 hover:bg-white rounded-2xl border border-stone-200/90 hover:border-emerald-500 overflow-hidden shadow-2xs hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between transform hover:-translate-y-1"
+                        className="group bg-white hover:bg-emerald-50/30 rounded-2xl border border-gray-200/90 hover:border-emerald-400 overflow-hidden shadow-2xs hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between transform hover:-translate-y-1"
                       >
-                        {/* Trainee Card Top Photo */}
-                        <div className="relative aspect-[3/4] bg-stone-200 overflow-hidden">
+                        {/* Trainee Card Top Photo (Clear, Natural, Bright) */}
+                        <div className="relative aspect-[3/4] bg-stone-100 overflow-hidden">
                           <img
                             src={trainee.image}
                             alt={trainee.name}
-                            className="w-full h-full object-cover object-top transition duration-500 group-hover:scale-105"
+                            className="w-full h-full object-cover object-top transition duration-500 group-hover:scale-104"
                             onError={(e) => {
                               // Fallback รูปภาพหากไฟล์ในโฟลเดอร์ยังไม่มี
                               e.target.onerror = null;
                               e.target.src = 'sample-member.jpg';
                             }}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
-                          
-                          {/* Role Tag & ID Badge */}
-                          <div className="absolute top-2.5 left-2.5">
-                            <span className="bg-emerald-900/90 text-white text-[10px] font-mono px-2 py-0.5 rounded-md border border-emerald-600/60 shadow">
-                              {trainee.id}
-                            </span>
-                          </div>
-                          <div className="absolute top-2.5 right-2.5">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow ${
-                              trainee.role.includes('ประธาน')
-                                ? 'bg-amber-400 text-amber-950 font-black'
-                                : 'bg-white/90 text-gray-700'
-                            }`}>
-                              {trainee.role}
-                            </span>
-                          </div>
-
-                          {/* Trainee Name on bottom of photo */}
-                          <div className="absolute bottom-2.5 left-3 right-3 text-white">
-                            <div className="text-base font-bold drop-shadow leading-tight">
-                              {trainee.name}
-                            </div>
-                            <div className="text-xs text-amber-300 font-medium">
-                              ({trainee.nickname})
-                            </div>
-                          </div>
                         </div>
 
-                        {/* Trainee Details Bottom */}
-                        <div className="p-3.5 space-y-2 text-xs flex-1 flex flex-col justify-between">
-                          <div className="space-y-1.5">
-                            <div className="flex items-start gap-1.5 text-gray-700">
-                              <i className="fa-solid fa-seedling text-emerald-600 mt-0.5 shrink-0"></i>
-                              <span className="font-semibold text-gray-900 line-clamp-1">
-                                {trainee.treeSpecies}
-                              </span>
-                            </div>
-                            <div className="text-[11px] text-gray-500 line-clamp-2 italic bg-white p-2 rounded-lg border border-gray-100">
-                              "{trainee.highlight}"
-                            </div>
+                        {/* Trainee Details Bottom: เฉพาะชื่อจริง และชื่อเล่น ตามที่ผู้ใช้ระบุ */}
+                        <div className="p-3 text-center bg-white border-t border-gray-100 flex flex-col justify-center">
+                          <div className="text-sm font-bold text-gray-900 group-hover:text-emerald-700 transition leading-snug truncate">
+                            {trainee.name}
                           </div>
-
-                          <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                              <i className="fa-solid fa-circle-check text-emerald-500"></i>
-                              {trainee.status}
-                            </span>
-                            <span className="text-[11px] text-gray-400 group-hover:text-emerald-700 flex items-center gap-1 transition">
-                              ดูประวัติ <i className="fa-solid fa-chevron-right text-[9px]"></i>
-                            </span>
+                          <div className="text-xs text-emerald-700 font-medium mt-0.5">
+                            ({trainee.nickname})
                           </div>
                         </div>
 
@@ -508,62 +466,61 @@ export default function BonsaiTraineeChart() {
                   </div>
                 </div>
               ) : (
-                /* View 2: Hierarchical Org Chart View */
+                /* View 2: Hierarchical Org Chart View - สะอาด สบายตา */
                 <div className="p-6 sm:p-8 overflow-x-auto">
                   <div className="min-w-[650px] flex flex-col items-center">
                     
                     {/* Level 1: Instructor / Master */}
-                    <div className="bg-emerald-950 text-white px-6 py-3 rounded-2xl shadow-md border-2 border-emerald-500 text-center max-w-sm mb-6">
-                      <div className="text-[11px] uppercase tracking-wider text-amber-300 font-bold">วิทยากรผู้ทรงคุณวุฒิประจำรุ่น</div>
+                    <div className="bg-emerald-800 text-white px-6 py-3 rounded-2xl shadow-xs border border-emerald-600 text-center max-w-sm mb-6">
+                      <div className="text-[11px] uppercase tracking-wider text-emerald-200 font-bold">วิทยากรผู้ทรงคุณวุฒิประจำรุ่น</div>
                       <div className="text-sm font-bold mt-0.5">{batch.instructor}</div>
-                      <div className="text-[11px] text-emerald-200 mt-1">{batch.location}</div>
+                      <div className="text-[11px] text-emerald-100 mt-0.5">{batch.location}</div>
                     </div>
 
-                    <div className="w-0.5 h-6 bg-emerald-600 mb-6"></div>
+                    <div className="w-0.5 h-6 bg-emerald-400 mb-6"></div>
 
                     {/* Level 2: Batch President */}
                     {batch.trainees.filter(t => t.role.includes('ประธาน')).map(leader => (
                       <div key={leader.id} className="flex flex-col items-center mb-6">
                         <div
                           onClick={() => setSelectedTrainee({ ...leader, batch })}
-                          className="bg-amber-50 hover:bg-amber-100 border-2 border-amber-400 rounded-2xl p-4 shadow-md flex items-center gap-3 cursor-pointer transition transform hover:scale-105"
+                          className="bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-300 rounded-2xl p-3 shadow-xs flex items-center gap-3 cursor-pointer transition transform hover:scale-103"
                         >
                           <img
                             src={leader.image}
                             alt={leader.name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-amber-500 shadow-sm"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-emerald-400 shadow-2xs"
                             onError={(e) => { e.target.src = 'sample-member.jpg'; }}
                           />
                           <div>
-                            <span className="px-2 py-0.5 bg-amber-400 text-amber-950 font-bold text-[10px] rounded-full">
+                            <span className="px-2 py-0.5 bg-emerald-700 text-white font-bold text-[10px] rounded-full">
                               {leader.role}
                             </span>
                             <div className="text-sm font-bold text-gray-900 mt-0.5">{leader.name}</div>
-                            <div className="text-xs text-gray-600">{leader.treeSpecies}</div>
+                            <div className="text-xs text-emerald-700 font-medium">({leader.nickname})</div>
                           </div>
                         </div>
-                        <div className="w-0.5 h-6 bg-emerald-600 mt-6"></div>
+                        <div className="w-0.5 h-6 bg-emerald-400 mt-6"></div>
                       </div>
                     ))}
 
                     {/* Level 3: Members Grid */}
-                    <div className="w-full flex justify-center flex-wrap gap-4 pt-4 border-t-2 border-dashed border-emerald-300">
+                    <div className="w-full flex justify-center flex-wrap gap-3 pt-4 border-t border-dashed border-emerald-200">
                       {batch.trainees.map((trainee) => (
                         <div
                           key={trainee.id}
                           onClick={() => setSelectedTrainee({ ...trainee, batch })}
-                          className="bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-500 rounded-xl p-3 shadow-xs hover:shadow-md transition cursor-pointer flex items-center gap-3 w-56 transform hover:-translate-y-0.5"
+                          className="bg-white hover:bg-emerald-50 border border-gray-200 hover:border-emerald-400 rounded-xl p-2.5 shadow-2xs hover:shadow-xs transition cursor-pointer flex items-center gap-2.5 w-48 transform hover:-translate-y-0.5"
                         >
                           <img
                             src={trainee.image}
                             alt={trainee.name}
-                            className="w-10 h-10 rounded-full object-cover border border-emerald-300"
+                            className="w-9 h-9 rounded-full object-cover border border-emerald-200 shrink-0"
                             onError={(e) => { e.target.src = 'sample-member.jpg'; }}
                           />
                           <div className="overflow-hidden">
                             <div className="text-xs font-bold text-gray-900 truncate">{trainee.name}</div>
-                            <div className="text-[10px] text-gray-500 truncate">{trainee.treeSpecies}</div>
-                            <div className="text-[9px] text-emerald-600 font-mono">{trainee.id}</div>
+                            <div className="text-[11px] text-emerald-700 font-medium truncate">({trainee.nickname})</div>
                           </div>
                         </div>
                       ))}
@@ -574,13 +531,13 @@ export default function BonsaiTraineeChart() {
               )}
 
               {/* Batch Footer Summary */}
-              <div className="px-6 py-3 bg-stone-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap items-center justify-between gap-2">
+              <div className="px-6 py-3 bg-stone-50/70 border-t border-emerald-100 text-xs text-gray-500 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <i className="fa-solid fa-circle-info text-emerald-600 mr-1.5"></i>
-                  ภาพถ่ายจริงถูกโหลดจากโฟลเดอร์ <span className="font-semibold text-gray-700">{batch.folder}/</span>
+                  รูปถ่ายดึงจากโฟลเดอร์ <span className="font-semibold text-gray-700">{batch.folder}/</span>
                 </div>
                 <div className="font-medium text-emerald-800">
-                  จำนวนผู้ผ่านการประเมิน {batch.trainees.length} ท่าน
+                  ผู้เข้าร่วมอบรม {batch.trainees.length} ท่าน
                 </div>
               </div>
 
@@ -589,24 +546,25 @@ export default function BonsaiTraineeChart() {
         )}
       </main>
 
+
       {/* 4. Trainee Detail Modal Popup */}
       {selectedTrainee && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 transform transition-all">
             
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-emerald-950 to-green-900 text-white px-6 py-4 flex items-center justify-between border-b border-emerald-700">
+            {/* Modal Header - โทนสว่าง สบายตา */}
+            <div className="bg-emerald-50/80 text-gray-800 px-6 py-4 flex items-center justify-between border-b border-emerald-100">
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 bg-amber-400 text-amber-950 font-bold text-xs rounded-full">
+                <span className="px-2.5 py-0.5 bg-emerald-700 text-white font-bold text-xs rounded-full shadow-2xs">
                   {selectedTrainee.batch.batchNumber}
                 </span>
-                <span className="text-xs text-emerald-200 font-mono">
+                <span className="text-xs text-emerald-800 font-mono font-semibold">
                   {selectedTrainee.id}
                 </span>
               </div>
               <button
                 onClick={() => setSelectedTrainee(null)}
-                className="w-8 h-8 rounded-full bg-emerald-800/80 hover:bg-emerald-700 text-white flex items-center justify-center text-sm transition"
+                className="w-8 h-8 rounded-full bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700 flex items-center justify-center text-sm border border-gray-200 transition cursor-pointer"
               >
                 <i className="fa-solid fa-xmark"></i>
               </button>
