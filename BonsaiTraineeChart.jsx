@@ -1146,7 +1146,8 @@ export default function BonsaiTraineeChart() {
               )}
             </div>
 
-            {/* ฟังก์ชันครอบรูปภาพ: ครอบเฉพาะโซนหน้า (Auto Face Crop) vs ภาพเต็มตัว */}
+            {/* ฟังก์ชันครอบรูปภาพ: ครอบเฉพาะโซนหน้า (Auto Face Crop) vs ภาพเต็มตัว (ปิดชั่วคราว) */}
+            {/*
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
               cardTheme === 'wattvision'
                 ? 'bg-[#141414] border-[#2C2C2E]'
@@ -1154,7 +1155,7 @@ export default function BonsaiTraineeChart() {
                 ? 'bg-slate-900 border-emerald-700'
                 : 'bg-stone-100 border-gray-200'
             }`}>
-              {/* <button
+              <button
                 onClick={() => handleCropModeChange('face')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                   cropMode === 'face'
@@ -1169,8 +1170,8 @@ export default function BonsaiTraineeChart() {
               >
                 <i className="fa-solid fa-user-tie"></i>
                 <span>ครอบโซนหน้า</span>
-              </button> */}
-              {/* <button
+              </button>
+              <button
                 onClick={() => handleCropModeChange('full')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
                   cropMode === 'full'
@@ -1186,9 +1187,11 @@ export default function BonsaiTraineeChart() {
                 <i className="fa-solid fa-tree"></i>
                 <span>ภาพเต็ม</span>
               </button>
-            </div> */}
+            </div>
+            */}
 
-            {/* ปุ่มย่อขนาดการ์ด: กะทัดรัด (ย่อสั้น) vs ปกติ */}
+            {/* ปุ่มย่อขนาดการ์ด: กะทัดรัด (ย่อสั้น) vs ปกติ (ปิดชั่วคราว) */}
+            {/*
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
               cardTheme === 'wattvision'
                 ? 'bg-[#141414] border-[#2C2C2E]'
@@ -1229,6 +1232,7 @@ export default function BonsaiTraineeChart() {
                 <span>ปกติ</span>
               </button>
             </div>
+            */}
 
             {/* โหมดเมื่อกดที่รูปภาพ: กดรูปเพื่อครอบ (Interactive Crop) vs ดูประวัติ */}
             <div className={`p-1 rounded-2xl flex items-center border shrink-0 ${
