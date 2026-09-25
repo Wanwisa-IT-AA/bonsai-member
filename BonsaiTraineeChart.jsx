@@ -31,6 +31,63 @@ function formatDriveImageUrl(url) {
   return url;
 }
 
+// ⚡ ตัวช่วยดึงข้อมูลด่วนผ่าน Google Sheets CSV Link (เร็วกว่า Apps Script 10-20 เท่า)
+const GOOGLE_SPREADSHEET_ID = 
+  (typeof localStorage !== 'undefined' && localStorage.getItem('BONSAI_SPREADSHEET_ID')) || '';
+
+/**
+ * ฟังก์ชันแปลงข้อความ CSV เป็น JavaScript Objects (RFC 4180 รองรับเครื่องหมายจุลภาคและเครื่องหมายคำพูด)
+ */
+function parseCSV(csvText) {
+  if (!csvText) return [];
+  const rows = [];
+  let row = [];
+  let inQuotes = false;
+  let curVal = '';
+
+  for (let i = 0; i < csvText.length; i++) {
+    const c = csvText[i];
+    const next = csvText[i + 1];
+
+    if (c === '"') {
+      if (inQuotes && next === '"') {
+        curVal += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (c === ',' && !inQuotes) {
+      row.push(curVal.trim());
+      curVal = '';
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') i++;
+      row.push(curVal.trim());
+      if (row.length > 1 || (row.length === 1 && row[0] !== '')) {
+        rows.push(row);
+      }
+      row = [];
+      curVal = '';
+    } else {
+      curVal += c;
+    }
+  }
+  if (curVal || row.length > 0) {
+    row.push(curVal.trim());
+    rows.push(row);
+  }
+
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.replace(/^["']|["']$/g, '').trim());
+  return rows.slice(1).map(r => {
+    const obj = {};
+    headers.forEach((h, idx) => {
+      const val = r[idx] !== undefined ? r[idx].replace(/^["']|["']$/g, '').trim() : '';
+      obj[h] = val;
+    });
+    return obj;
+  });
+}
+
 // ข้อมูลหลักสูตรและการจัดอบรมแต่ละรุ่น
 const INITIAL_BATCH_METADATA = [
   {
@@ -1124,8 +1181,15 @@ export default function BonsaiTraineeChart() {
   const [lastScanTime, setLastScanTime] = useState(null);
   const [newImageAlert, setNewImageAlert] = useState(null);
 
-  // สถานะข้อมูลรุ่นและผู้ผ่านการอบรมที่ดึงมาจากโฟลเดอร์แบบไดนามิก
+  // สถานะข้อมูลรุ่นและผู้ผ่านการอบรม (รองรับ Stale-While-Revalidate โหลดพรีวิวทันทีใน 0 วินาที)
   const [batches, setBatches] = useState(() => {
+    try {
+      const cached = localStorage.getItem('bonsai_cached_batches');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
     return INITIAL_BATCH_METADATA.map((b) => ({
       ...b,
       trainees: []
@@ -1405,7 +1469,54 @@ export default function BonsaiTraineeChart() {
     if (isManual) setIsScanning(true);
 
     try {
-      // 1. ลองดึงข้อมูลจาก Google Sheets ก่อนเป็นอันดับแรก (ถ้ามีการจัดเก็บข้อมูลในชีต Trainees)
+      // ⚡ ระดับที่ 1: ดึงผ่าน Google Sheets CSV Link (เร็วที่สุด ระดับ 100-300ms)
+      const currentSheetId = GOOGLE_SPREADSHEET_ID || (typeof localStorage !== 'undefined' ? localStorage.getItem('BONSAI_SPREADSHEET_ID') : '');
+      if (currentSheetId) {
+        try {
+          const csvUrl = `https://docs.google.com/spreadsheets/d/${currentSheetId}/gviz/tq?tqx=out:csv&sheet=Trainees&_t=${Date.now()}`;
+          const csvRes = await fetch(csvUrl);
+          if (csvRes.ok) {
+            const csvText = await csvRes.text();
+            const csvRows = parseCSV(csvText);
+            if (Array.isArray(csvRows) && csvRows.length > 0 && csvRows.some(t => t.batch !== undefined || t.id !== undefined)) {
+              const updatedBatches = INITIAL_BATCH_METADATA.map((batch) => {
+                const traineesInBatch = csvRows
+                  .filter((t) => Number(t.batch) === batch.id)
+                  .map((t, index) => {
+                    const fname = t.photoUrl ? t.photoUrl.split('/').pop() : `${t.id}.jpg`;
+                    return {
+                      id: t.id || `BKK-0${batch.id}-${String(index + 1).padStart(2, '0')}`,
+                      name: t.name,
+                      nickname: t.nickname,
+                      role: t.role || (index === 0 ? `ประธานรุ่นที่ ${batch.id}` : 'สมาชิก'),
+                      filename: fname,
+                      image: formatDriveImageUrl(t.photoUrl) || `bangkokimage/${batch.folderNum}/trainee_01.jpg`,
+                      treeSpecies: 'บอนไซศิลปะสร้างสรรค์',
+                      status: t.status || 'จบหลักสูตร',
+                      certNo: t.certNo || `TBA-CERT-2026-0${batch.id}${String(index + 1).padStart(2, '0')}`,
+                      highlight: 'ผ่านการฝึกอบรมศิลปะการปลูกและสร้างสรรค์บอนไซ'
+                    };
+                  });
+
+                return {
+                  ...batch,
+                  trainees: traineesInBatch
+                };
+              });
+
+              setBatches(updatedBatches);
+              setDataSource('google');
+              setLastScanTime(new Date());
+              try { localStorage.setItem('bonsai_cached_batches', JSON.stringify(updatedBatches)); } catch (e) {}
+              return;
+            }
+          }
+        } catch (csvErr) {
+          console.warn('CSV Link fetch notice, falling back to Apps Script:', csvErr);
+        }
+      }
+
+      // 🌐 ระดับที่ 2: ดึงข้อมูลผ่าน Google Apps Script Web App (พร้อมสืบค้น Spreadsheet ID อัตโนมัติ)
       try {
         const gsRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=getTrainees&_t=${Date.now()}`);
         if (gsRes.ok) {
@@ -1440,12 +1551,26 @@ export default function BonsaiTraineeChart() {
             setBatches(updatedBatches);
             setDataSource('google');
             setLastScanTime(new Date());
+            try { localStorage.setItem('bonsai_cached_batches', JSON.stringify(updatedBatches)); } catch (e) {}
+
+            // พยายามสืบค้น Spreadsheet ID อัตโนมัติเพื่อใช้ CSV Link ในครั้งถัดไป
+            if (!currentSheetId) {
+              fetch(`${GOOGLE_SCRIPT_URL}?action=getInfo`)
+                .then(r => r.json())
+                .then(info => {
+                  if (info && info.spreadsheetId) {
+                    try { localStorage.setItem('BONSAI_SPREADSHEET_ID', info.spreadsheetId); } catch (e) {}
+                  }
+                })
+                .catch(() => {});
+            }
+
             return;
           }
         }
       } catch (err) {}
 
-      // 2. หากยังไม่มีข้อมูลใน Google Sheets ให้สแกนจากโฟลเดอร์ภาพในเครื่อง
+      // 💾 ระดับที่ 3: หากยังไม่มีข้อมูลใน Google Sheets ให้สแกนจากโฟลเดอร์ภาพในเครื่อง
       setDataSource('local');
       const manifestUrl = `bangkokimage/manifest.json?_t=${Date.now()}`;
       let manifestData = null;

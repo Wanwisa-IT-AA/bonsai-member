@@ -32,6 +32,21 @@ function doGet(e) {
       return handleGetTrainees();
     }
 
+    // ส่งคืน ID และลิงก์ CSV ของแต่ละชีต เพื่อให้ Frontend ดึงข้อมูลได้เร็วระดับ 100ms
+    if (action === "getInfo" || action === "getCsvLinks") {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return responseJSON({
+        status: "success",
+        spreadsheetId: ss.getId(),
+        spreadsheetUrl: ss.getUrl(),
+        sheets: ss.getSheets().map(s => ({
+          name: s.getName(),
+          gid: s.getSheetId(),
+          csvUrl: "https://docs.google.com/spreadsheets/d/" + ss.getId() + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(s.getName())
+        }))
+      });
+    }
+
     const sheet = getTargetSheet();
     const dataRange = sheet.getDataRange();
     const values = dataRange.getValues();
